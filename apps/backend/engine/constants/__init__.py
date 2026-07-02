@@ -1,0 +1,21 @@
+"""
+프로젝트 전역에서 사용하는 상수 정의
+"""
+
+# 최저임금 (2026년 기준, 고용노동부 고시 제2025-47호)
+MINIMUM_WAGE_2026 = 10320
+MINIMUM_WAGE_YEAR = 2026
+
+# 주휴수당 기준 시간 (주 15시간 미만 제외)
+WEEKLY_HOURLY_THRESHOLD = 15
+
+# 주휴수당 계산 상수
+STANDARD_WEEKLY_HOURS = 40
+WEEKLY_ALLOWANCE_HOURS = 8
+
+# 월 환산 계수
+MONTHLY_WEEKS = 4.345
+
+# 퇴직금 조건
+MIN_DAYS_FOR_SEVERANCE = 365
+SEVERANCE_DAYS_MULTIPLIER = 30

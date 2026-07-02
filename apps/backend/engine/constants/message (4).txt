@@ -1,0 +1,118 @@
+{
+  "form_id": "monetary_compensation",
+  "form_name": "금전보상명령신청서",
+
+  "sections": [
+
+    {
+      "id": "case_info",
+      "title": "사건",
+
+      "fields": [
+
+        {
+          "key": "case_number",
+          "label": "사건번호",
+          "type": "text"
+        }
+      ]
+    },
+
+    {
+      "id": "applicant",
+      "title": "신청인",
+
+      "fields": [
+
+        {
+          "key": "applicant_name",
+          "label": "성명",
+          "type": "text"
+        },
+
+        {
+          "key": "applicant_address",
+          "label": "주소",
+          "type": "text"
+        },
+
+        {
+          "key": "applicant_phone",
+          "label": "전화번호",
+          "type": "text"
+        },
+
+        {
+          "key": "employment_start_date",
+          "label": "근속 시작일",
+          "type": "date"
+        },
+
+        {
+          "key": "employment_end_date",
+          "label": "근속 종료일",
+          "type": "date"
+        },
+
+        {
+          "key": "employment_period",
+          "label": "총 근속기간",
+          "type": "text"
+        }
+      ]
+    },
+
+    {
+      "id": "compensation",
+      "title": "금전보상 신청내용",
+
+      "fields": [
+
+        {
+          "key": "total_amount",
+          "label": "합계금원",
+          "type": "currency"
+        },
+
+        {
+          "key": "wage_amount",
+          "label": "임금상당액",
+          "type": "currency"
+        },
+
+        {
+          "key": "wage_calculation_basis",
+          "label": "임금상당액 산출근거",
+          "type": "textarea"
+        },
+
+        {
+          "key": "additional_compensation",
+          "label": "기타 보상금",
+          "type": "currency"
+        },
+
+        {
+          "key": "additional_compensation_basis",
+          "label": "기타 보상금 산출근거",
+          "type": "textarea"
+        }
+      ]
+    },
+
+    {
+      "id": "attachments",
+      "title": "입증자료",
+
+      "fields": [
+
+        {
+          "key": "attachments",
+          "label": "첨부자료",
+          "type": "file",
+          "multiple": true
+        }
+      ]
+    }
+  ]
+}
