@@ -1,0 +1,12 @@
+law_test
+.env
+final_reason copy.ipynb
+temp
+__pycache__
+
+# ChromaDB - 벡터 데이터베이스 (재생산 가능)
+workspace/chroma_db/
+
+# 캐시 json
+data/cache
+.omo/
