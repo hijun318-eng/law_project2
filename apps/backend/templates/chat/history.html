@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대화 기록</title>
+</head>
+<body>
+    <h1>대화 기록</h1>
+    <ul>
+    {% for chat in chats %}
+        <li>
+            <a href="{% url 'chat:result' chat.id %}">
+                [{{ chat.get_mode_display }}] {{ chat.question|truncatechars:50 }}
+            </a>
+            <small>{{ chat.created_at|date:"Y-m-d H:i" }}</small>
+        </li>
+    {% empty %}
+        <li>대화 기록이 없습니다.</li>
+    {% endfor %}
+    </ul>
+    <a href="{% url 'chat:chat' %}">새 질문하기</a>
+</body>
+</html>

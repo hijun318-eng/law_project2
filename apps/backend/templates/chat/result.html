@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>질문 결과</title>
+</head>
+<body>
+    <h1>질문 결과</h1>
+    <div>
+        <h2>질문</h2>
+        <p>{{ chat.question }}</p>
+    </div>
+    <div>
+        <h2>답변</h2>
+        <p>{{ chat.answer }}</p>
+    </div>
+    <a href="{% url 'chat:chat' %}">새 질문하기</a>
+</body>
+</html>
