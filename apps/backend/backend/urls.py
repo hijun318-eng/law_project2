@@ -22,4 +22,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('chat/', include('chat.urls')),
     path('', views.example, name='example'),
+    path('calculator/', include('calculator.urls')),
 ]
