@@ -1,7 +1,7 @@
 # pyright: reportAttributeAccessIssue=false
 
 from django.http import StreamingHttpResponse, JsonResponse
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 import json
 
 from .models import ChatHistory
@@ -148,5 +148,32 @@ def result_view(request, id):
 
 
 def history_view(request):
-    chats = ChatHistory.objects.all()[:20]
-    return render(request, 'chat/history.html', {'chats': chats})
+    session_key = request.session.session_key
+    if not session_key:
+        request.session.create()
+        session_key = request.session.session_key
+
+    chats = ChatHistory.objects.filter(session_key=session_key)
+
+    # 검색
+    q = request.GET.get('q', '')
+    if q:
+        chats = chats.filter(question__icontains=q)
+
+    # 페이지네이션 (20개/page)
+    from django.core.paginator import Paginator
+    paginator = Paginator(chats, 20)
+    page = request.GET.get('page', 1)
+    chats_page = paginator.get_page(page)
+
+    return render(request, 'chat/history.html', {
+        'chats': chats_page,
+        'q': q,
+    })
+
+
+def delete_view(request, id):
+    if request.method == 'POST':
+        chat = get_object_or_404(ChatHistory, id=id)
+        chat.delete()
+    return redirect('chat:history')

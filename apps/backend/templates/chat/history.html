@@ -4,21 +4,235 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>대화 기록</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px 16px;
+            background: #f8f9fa;
+            color: #333;
+        }
+        h1 { font-size: 1.5rem; margin-bottom: 20px; }
+        .search-form {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .search-form input[type="text"] {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+        .search-form button {
+            padding: 10px 20px;
+            background: #1a73e8;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        .search-form button:hover { background: #1557b0; }
+        .session-header {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 12px;
+            padding: 6px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .chat-list { list-style: none; padding: 0; margin: 0; }
+        .chat-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 14px 16px;
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            transition: box-shadow 0.2s;
+        }
+        .chat-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .chat-content { flex: 1; min-width: 0; }
+        .chat-question {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 4px;
+            display: block;
+            color: #1a73e8;
+            text-decoration: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .chat-question:hover { text-decoration: underline; }
+        .chat-answer {
+            font-size: 0.88rem;
+            color: #666;
+            margin-bottom: 6px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .chat-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.8rem;
+            color: #999;
+        }
+        .chat-mode {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .mode-rag { background: #e3f2fd; color: #1565c0; }
+        .mode-procedure { background: #fce4ec; color: #c62828; }
+        .mode-calculator { background: #e8f5e9; color: #2e7d32; }
+        .mode-news { background: #fff3e0; color: #e65100; }
+        .mode-default { background: #f3e5f5; color: #6a1b9a; }
+        .delete-form { margin-left: 12px; flex-shrink: 0; }
+        .delete-btn {
+            padding: 6px 12px;
+            background: none;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            color: #999;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        .delete-btn:hover {
+            background: #fee;
+            border-color: #fcc;
+            color: #c00;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 24px;
+        }
+        .pagination a, .pagination span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            height: 36px;
+            padding: 0 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            text-decoration: none;
+            color: #555;
+        }
+        .pagination .current {
+            background: #1a73e8;
+            color: #fff;
+            border-color: #1a73e8;
+        }
+        .pagination a:hover { background: #f0f0f0; }
+        .empty-state {
+            text-align: center;
+            padding: 48px 16px;
+            color: #999;
+        }
+        .nav-link {
+            display: inline-block;
+            margin-top: 16px;
+            color: #1a73e8;
+            text-decoration: none;
+        }
+        .nav-link:hover { text-decoration: underline; }
+    </style>
 </head>
 <body>
-    <h1>대화 기록</h1>
-    <ul>
+    <h1>📋 대화 기록</h1>
+
+    <!-- 검색창 -->
+    <form class="search-form" method="get" action="{% url 'chat:history' %}">
+        <input type="text" name="q" placeholder="질문 검색..." value="{{ q }}">
+        <button type="submit">검색</button>
+        {% if q %}
+            <a href="{% url 'chat:history' %}" style="display:inline-flex;align-items:center;padding:10px 16px;color:#888;text-decoration:none;">✕ 초기화</a>
+        {% endif %}
+    </form>
+
+    <!-- 세션 정보 -->
+    <div class="session-header">
+        현재 세션 기준 조회
+    </div>
+
+    <!-- 목록 -->
+    {% if chats %}
+    <ul class="chat-list">
     {% for chat in chats %}
-        <li>
-            <a href="{% url 'chat:result' chat.id %}">
-                [{{ chat.get_mode_display }}] {{ chat.question|truncatechars:50 }}
-            </a>
-            <small>{{ chat.created_at|date:"Y-m-d H:i" }}</small>
+        <li class="chat-item">
+            <div class="chat-content">
+                <a href="{% url 'chat:result' chat.id %}" class="chat-question">
+                    {{ chat.question|truncatechars:60 }}
+                </a>
+                <div class="chat-answer">
+                    {{ chat.answer|default:'(답변 없음)'|truncatechars:120 }}
+                </div>
+                <div class="chat-meta">
+                    <span class="chat-mode
+                        {% if chat.mode == 'rag' %}mode-rag
+                        {% elif chat.mode == 'procedure_guidance' %}mode-procedure
+                        {% elif chat.mode == 'allowance_calculator' %}mode-calculator
+                        {% elif chat.mode == 'latest_news' %}mode-news
+                        {% else %}mode-default{% endif %}">
+                        {{ chat.get_mode_display }}
+                    </span>
+                    <span>{{ chat.created_at|date:"Y-m-d H:i" }}</span>
+                </div>
+            </div>
+            <form class="delete-form" method="post" action="{% url 'chat:delete' chat.id %}"
+                  onsubmit="return confirm('이 대화를 삭제하시겠습니까?');">
+                {% csrf_token %}
+                <button type="submit" class="delete-btn">🗑 삭제</button>
+            </form>
         </li>
-    {% empty %}
-        <li>대화 기록이 없습니다.</li>
     {% endfor %}
     </ul>
-    <a href="{% url 'chat:chat' %}">새 질문하기</a>
+    {% else %}
+    <div class="empty-state">
+        {% if q %}
+            <p>'{{ q }}'에 대한 검색 결과가 없습니다.</p>
+        {% else %}
+            <p>대화 기록이 없습니다.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- 페이지네이션 -->
+    {% if chats.has_other_pages %}
+    <div class="pagination">
+        {% if chats.has_previous %}
+            <a href="?page=1{% if q %}&q={{ q }}{% endif %}">«</a>
+            <a href="?page={{ chats.previous_page_number }}{% if q %}&q={{ q }}{% endif %}">‹</a>
+        {% endif %}
+
+        {% for num in chats.paginator.page_range %}
+            {% if chats.number == num %}
+                <span class="current">{{ num }}</span>
+            {% elif num > chats.number|add:'-3' and num < chats.number|add:'3' %}
+                <a href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if chats.has_next %}
+            <a href="?page={{ chats.next_page_number }}{% if q %}&q={{ q }}{% endif %}">›</a>
+            <a href="?page={{ chats.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}">»</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <a href="{% url 'chat:chat' %}" class="nav-link">← 새 질문하기</a>
 </body>
 </html>

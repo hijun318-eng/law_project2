@@ -3,18 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>질문 결과</title>
+    <title>질문 결과 상세</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px 16px;
+            background: #f8f9fa;
+            color: #333;
+            line-height: 1.7;
+        }
+        h1 { font-size: 1.5rem; margin-bottom: 24px; }
+        .card {
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 1.05rem;
+            margin: 0 0 12px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #1a73e8;
+            color: #1a73e8;
+        }
+        .question-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #222;
+        }
+        .answer-text {
+            white-space: pre-wrap;
+            font-size: 0.95rem;
+            color: #333;
+        }
+        .mode-badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .mode-rag { background: #e3f2fd; color: #1565c0; }
+        .mode-procedure { background: #fce4ec; color: #c62828; }
+        .mode-calculator { background: #e8f5e9; color: #2e7d32; }
+        .mode-news { background: #fff3e0; color: #e65100; }
+        .mode-default { background: #f3e5f5; color: #6a1b9a; }
+        .meta-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 16px;
+            font-size: 0.85rem;
+            color: #999;
+        }
+        .sources-list { list-style: none; padding: 0; margin: 0; }
+        .source-item {
+            padding: 12px 14px;
+            background: #f8f9fb;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .source-item strong { color: #555; }
+        .source-item .key { color: #1a73e8; font-weight: 500; }
+        .source-item .val { color: #555; word-break: break-all; }
+        .source-type-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        .type-law { background: #e8f5e9; color: #2e7d32; }
+        .type-precedent { background: #fff3e0; color: #e65100; }
+        .type-default { background: #f3e5f5; color: #6a1b9a; }
+        .no-sources {
+            color: #aaa;
+            font-style: italic;
+        }
+        .nav-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #1a73e8;
+            text-decoration: none;
+        }
+        .nav-link:hover { text-decoration: underline; }
+        .nav-links {
+            display: flex;
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .key-value-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 4px 12px;
+            font-size: 0.9rem;
+        }
+        .key-value-grid .kv-key {
+            color: #888;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .key-value-grid .kv-val {
+            color: #333;
+            word-break: break-word;
+        }
+        hr { border: none; border-top: 1px solid #eee; margin: 12px 0; }
+    </style>
 </head>
 <body>
-    <h1>질문 결과</h1>
-    <div>
+    <h1>📄 질문 결과 상세</h1>
+
+    <!-- 질문 카드 -->
+    <div class="card">
         <h2>질문</h2>
-        <p>{{ chat.question }}</p>
+        <div class="question-text">{{ chat.question }}</div>
     </div>
-    <div>
+
+    <!-- 답변 카드 -->
+    <div class="card">
         <h2>답변</h2>
-        <p>{{ chat.answer }}</p>
+        <div class="answer-text">{{ chat.answer|default:'(답변 없음)' }}</div>
     </div>
-    <a href="{% url 'chat:chat' %}">새 질문하기</a>
+
+    <!-- 메타 정보 카드 -->
+    <div class="card">
+        <h2>정보</h2>
+        <div class="key-value-grid">
+            <span class="kv-key">모드</span>
+            <span class="kv-val">
+                <span class="mode-badge
+                    {% if chat.mode == 'rag' %}mode-rag
+                    {% elif chat.mode == 'procedure_guidance' %}mode-procedure
+                    {% elif chat.mode == 'allowance_calculator' %}mode-calculator
+                    {% elif chat.mode == 'latest_news' %}mode-news
+                    {% else %}mode-default{% endif %}">
+                    {{ chat.get_mode_display }}
+                </span>
+            </span>
+            <span class="kv-key">작성일</span>
+            <span class="kv-val">{{ chat.created_at|date:"Y-m-d H:i:s" }}</span>
+            {% if chat.session_key %}
+            <span class="kv-key">세션</span>
+            <span class="kv-val" style="font-size:0.8rem;color:#aaa;font-family:monospace;">{{ chat.session_key|truncatechars:20 }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 출처(Source) 카드 -->
+    <div class="card">
+        <h2>📚 출처 (Sources)</h2>
+        {% if chat.sources %}
+            {% if chat.sources|length > 0 %}
+            <ul class="sources-list">
+            {% for source in chat.sources %}
+                <li class="source-item">
+                    {% if source.type == 'law' %}
+                        <span class="source-type-tag type-law">📖 법령</span>
+                    {% elif source.type == 'precedent' or source.type == 'case' %}
+                        <span class="source-type-tag type-precedent">⚖️ 판례</span>
+                    {% else %}
+                        <span class="source-type-tag type-default">📄 기타</span>
+                    {% endif %}
+                    <div class="key-value-grid">
+                    {% for key, value in source.items %}
+                        {% if key != 'type' %}
+                        <span class="kv-key">{{ key }}</span>
+                        <span class="kv-val">{{ value }}</span>
+                        {% endif %}
+                    {% endfor %}
+                    </div>
+                </li>
+            {% endfor %}
+            </ul>
+            {% else %}
+            <div class="no-sources">출처 정보가 없습니다.</div>
+            {% endif %}
+        {% else %}
+        <div class="no-sources">출처 정보가 없습니다.</div>
+        {% endif %}
+    </div>
+
+    <!-- 네비게이션 -->
+    <div class="nav-links">
+        <a href="{% url 'chat:history' %}" class="nav-link">← 대화 기록</a>
+        <a href="{% url 'chat:chat' %}" class="nav-link">새 질문하기 →</a>
+    </div>
 </body>
 </html>
