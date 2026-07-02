@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'chat',
     'calculator',
     'news',
+    'home',
 ]
 
 MIDDLEWARE = [
