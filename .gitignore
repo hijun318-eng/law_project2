@@ -9,4 +9,11 @@ workspace/chroma_db/
 
 # 캐시 json
 data/cache
+
+# 데이터 파일 (바이너리 + JSON, git에 포함 불가)
+data/
+
+# ChromaDB 벡터 데이터베이스
+vector_db/
+
 .omo/db.sqlite3
