@@ -45,7 +45,11 @@ def _ensure_default_users():
         first_name="김민준",
     )
 
-# _ensure_default_users()
+try:
+    _ensure_default_users()
+except Exception:
+    # DB 테이블이 아직 생성되지 않은 경우(migrate 전) 무시
+    pass
 
 def landing(request):
     user = _current_user(request)
@@ -192,10 +196,10 @@ def user_app(request):
             "news_items": news_items,
             "news_summary": news_summary_text,
             "history": [
-                {"q": "퇴직금 계산 방법이 궁금합니다", "date": "2026-06-29", "category": "퇴직금"},
-                {"q": "임금체불 신고는 어디에 하나요?", "date": "2026-06-28", "category": "임금체불"},
-                {"q": "연차가 남아있는데 퇴직 시 어떻게 되나요?", "date": "2026-06-25", "category": "연차휴가"},
+                {"q": h.question, "date": h.created_at.strftime("%Y-%m-%d"), "category": h.mode or "rag"}
+                for h in ChatHistory.objects.filter(user__first_name=user["name"]).order_by("-created_at")[:20]
             ],
+            "history_count": ChatHistory.objects.filter(user__first_name=user["name"]).count(),
         },
     )
 
@@ -323,6 +327,46 @@ def advice_api(request):
         chat.save()
 
     return JsonResponse({"answer": answer, "message_id": chat.id})
+
+
+@require_POST
+def feedback_api(request):
+    payload = _json_payload(request)
+    message_id = payload.get("message_id")
+    action = payload.get("action", "")
+
+    # message_id validation
+    if message_id is None or not isinstance(message_id, int):
+        return JsonResponse({"error": "message_id가 필요합니다."}, status=400)
+
+    # action validation
+    if action not in ("like", "dislike"):
+        return JsonResponse({"error": "올바르지 않은 action입니다."}, status=400)
+
+    try:
+        chat = ChatHistory.objects.get(pk=message_id)
+    except ChatHistory.DoesNotExist:
+        return JsonResponse({"error": "메시지를 찾을 수 없습니다."}, status=404)
+
+    # Toggle logic
+    if chat.feedback is None:
+        if action == "like":
+            chat.feedback = True
+        else:  # dislike
+            chat.feedback = False
+    elif chat.feedback is True:
+        if action == "like":
+            chat.feedback = None  # cancel
+        else:  # dislike
+            chat.feedback = False  # switch
+    else:  # chat.feedback is False
+        if action == "like":
+            chat.feedback = True  # switch
+        else:  # dislike
+            chat.feedback = None  # cancel
+
+    chat.save(update_fields=["feedback"])
+    return JsonResponse({"ok": True, "feedback": chat.feedback})
 
 
 @require_POST

@@ -10,6 +10,6 @@
         {% endfor %}
     </div>
     <div data-tab-panel="profile" class="profile-card" hidden>
-        <dl><dt>이름</dt><dd>{{ user.name }}</dd><dt>이메일</dt><dd>{{ user.email }}</dd><dt>가입일</dt><dd>2024-01-15</dd><dt>총 상담 횟수</dt><dd>12회</dd></dl>
+        <dl><dt>이름</dt><dd>{{ user.name }}</dd><dt>이메일</dt><dd>{{ user.email }}</dd><dt>가입일</dt><dd>2024-01-15</dd><dt>총 상담 횟수</dt><dd>{{ history_count }}회</dd></dl>
     </div>
 </section>

@@ -19,6 +19,7 @@ urlpatterns = [
     path("api/admin/performance/", views.admin_performance_data, name="admin_performance_data"),
 
     path("api/advice/", views.advice_api, name="advice_api"),
+    path("api/advice/feedback/", views.feedback_api, name="feedback_api"),
     path("api/calculate/", views.calculate_api, name="calculate_api"),
     path("api/news/", views.news_api, name="news_api"),
     path("api/prompts/", views.prompt_api, name="prompt_api"),
