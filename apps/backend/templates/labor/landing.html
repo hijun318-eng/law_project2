@@ -1,0 +1,176 @@
+{% extends "labor/base.html" %}
+{% load static %}
+{% block body_class %}landing-body{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'labor/css/landing2.css' %}">
+{% endblock %}
+{% block content %}
+<header class="landing-header">
+    <a class="brand brand-light" href="{% url 'landing' %}"><span class="brand-mark">§</span><span>노동OK</span></a>
+    <nav class="landing-actions">
+        <a class="ghost-link" href="{% url 'login' %}">로그인</a>
+        <a class="primary-link" href="{% url 'register' %}">무료 시작</a>
+    </nav>
+</header>
+
+<main>
+    <section class="hero">
+        <div class="eyebrow">AI 기반 노동법 상담 서비스</div>
+        <h1>내 권리, 지금 바로<br><span>AI에게 물어보세요</span></h1>
+        <br><br>
+        <form class="hero-search" action="{% url 'login' %}" method="get">
+            <input name="question" placeholder="예: 3개월째 월급을 못 받았습니다. 어떻게 해야 하나요?">
+            <button type="submit">질문하기</button>
+        </form>
+        <small>법률 상담은 로그인 후 이용</small>
+    </section>
+
+    <section class="feature-grid">
+        {% for feature in features %}
+            <article class="feature-card">
+                <div class="feature-icon">{{ feature.icon }}</div>
+                <h2>{{ feature.title }}</h2>
+                <p>{{ feature.desc }}</p>
+            </article>
+        {% endfor %}
+    </section>
+
+    <section class="landing-stats">
+        {% for stat in stats %}
+            <div>
+                <strong>{{ stat.value }}</strong>
+                <span>{{ stat.label }}</span>
+            </div>
+        {% endfor %}
+    </section>
+</main>
+
+<div class="source-ticker">
+    <div class="source-ticker-label">
+        답변 근거로 삼는 데이터 출처
+    </div>
+
+    <div class="source-ticker-wrapper">
+        <div class="source-ticker-track">
+            {% for group in "12" %}
+            <div class="source-ticker-group">
+                {% for source in data_sources %}
+                    <span class="source-item">{{ source }}</span>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="hero-mock-wrap">
+    <div class="hero-mock">
+        <div class="hero-mock-bar">
+            <div class="hero-mock-dots"><span></span><span></span><span></span></div>
+            <span class="hero-mock-title">labor-law-ai / chat</span>
+            <span class="hero-mock-badge">GraphRAG · v2.4</span>
+        </div>
+        <div class="hero-mock-body">
+            <div class="mock-msg-user">3개월 일하고 어제 "내일부터 나오지 마"라는 말을 들었어요. 부당해고인가요?</div>
+            <div class="mock-msg-ai">
+                <div class="mock-avatar">⚖</div>
+                <div class="mock-ai-bubble">서면 통지 없이 구두로 즉시 해고를 통보한 것은 근로기준법 제27조 위반으로 해고 자체가 무효일 가능성이 높습니다. 또한 30일 전 예고가 없었다면 해고예고수당(제26조)도 청구할 수 있습니다.</div>
+            </div>
+            <div class="mock-sources">
+                <div class="mock-source-card">
+                    <span>근거 · 법령</span>
+                    <strong>근로기준법 제27조</strong>
+                    <small>해고사유·시기의 서면통지 의무</small>
+                </div>
+                <div class="mock-source-card">
+                    <span>근거 · 판례</span>
+                    <strong>대법원 2020다XXXXX</strong>
+                    <small>서면통지 결여 해고의 절차적 무효</small>
+                </div>
+            </div>
+            <div class="mock-loading">
+                <div class="mock-dots"><span></span><span></span><span></span></div>
+                판례 3건 검토 중...
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="features-section">
+    <div class="features-inner">
+        <div class="features-head">
+            <div>
+                <span class="eyebrow-label">Core Features</span>
+                <h2>AI가 분석하는 <em>노동법</em></h2>
+                <p>단순한 챗봇이 아닌 법률 전문가를 보조하는 AI. 신뢰성과 근거를 최우선으로 설계했습니다.</p>
+            </div>
+            <span class="live-badge">24/7 상담 가능</span>
+        </div>
+        <div class="feature-grid2">
+            {% for f in feature_cards %}
+            <article class="feature-card2 {{ f.variant }}">
+                <div class="feature-icon2">{{ f.icon }}</div>
+                <h3>{{ f.title }}</h3>
+                <p>{{ f.desc }}</p>
+                <div class="stat-row"><div><small>{{ f.stat_label }}</small><strong>{{ f.stat_value }}</strong></div></div>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="steps-section">
+    <div class="steps-head">
+        <span class="eyebrow-label">How it works</span>
+        <h2>질문에서 근거 있는 답변까지,<br><em>단 3단계</em></h2>
+    </div>
+    <div class="steps-list">
+        {% for step in steps %}
+        <div class="step-item">
+            <div class="step-tag"><b>STEP {{ forloop.counter|stringformat:"02d" }}</b><i></i><span>{{ forloop.counter|stringformat:"02d" }}/{{ steps|length|stringformat:"02d" }}</span></div>
+            <h3>{{ step.title }}</h3>
+            <p>{{ step.desc }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<div class="cta-wrap">
+    <div class="cta-card">
+        <div>
+            <div class="cta-eyebrow">무료 상담 · 회원가입 30초</div>
+            <h2>지금 이 상황, 법적으로 <em>어떻게</em><br><em>대응</em>해야 할까요?</h2>
+            <p>판례·법령 근거와 함께 24시간 답변. 부담 없이 지금 물어보세요.</p>
+        </div>
+        <a class="cta-button" href="{% url 'register' %}">AI 상담 시작하기 ↗</a>
+    </div>
+</div>
+
+<footer class="landing-footer2">
+    <div class="footer-grid">
+        <div>
+            <div class="footer-brand"><span>⚖</span> 노동법 <span class="gold">AI</span></div>
+            <p>근로기준법·산업안전보건법·판례·행정해석에 근거한 AI 노동법 상담 서비스. 신뢰할 수 있는 답변을 24시간, 어디서든.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Newsletter</h4>
+            <div class="footer-newsletter"><input placeholder="이메일 주소"><button>→</button></div>
+            <span class="footer-newsletter-note">법령·판례 업데이트 소식을 받고 싶다면 <a href="#">구독</a></span>
+        </div>
+        <div class="footer-col">
+            <h4>Service</h4>
+            <a href="{% url 'user_app' %}">AI 노동법 상담</a>
+            <a href="#">주요 기능</a>
+            <a href="#">이용 방법</a>
+        </div>
+        <div class="footer-col">
+            <h4>Follow</h4>
+            <a href="#">LinkedIn</a>
+            <a href="#">X (Twitter)</a>
+            <a href="#">Blog</a>
+        </div>
+    </div>
+    <div class="footer-wordmark">LABOR·LAW·AI</div>
+</footer>
+
+{% endblock %}

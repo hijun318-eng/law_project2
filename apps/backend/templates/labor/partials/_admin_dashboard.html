@@ -1,0 +1,10 @@
+<section class="admin-page">
+    <div class="page-head"><div><h1>관리자 대시보드</h1><p>2026년 7월 1일 기준</p></div><button class="secondary-button">새로고침</button></div>
+    <div class="stat-grid">{% for stat in stats %}<article class="stat-card {{ stat.tone }}"><span>{{ stat.change }}</span><strong>{{ stat.value }}</strong><p>{{ stat.label }}</p></article>{% endfor %}</div>
+    <div class="admin-grid">
+        <article class="panel wide"><h2>일별 현황</h2><div class="bar-chart">{% for item in daily %}<div><span class="bar q" style="height: {{ item.question_height }}%"></span><span class="bar u" style="height: {{ item.user_height }}%"></span><small>{{ item.date }}</small></div>{% endfor %}</div></article>
+        <article class="panel"><h2>카테고리 분포</h2>{% for item in categories %}<div class="metric-row"><span>{{ item.name }}</span><meter value="{{ item.value }}" min="0" max="30"></meter><b>{{ item.value }}%</b></div>{% endfor %}</article>
+        <article class="panel"><h2>자주 묻는 질문 TOP 7</h2>{% for item in faq %}<div class="faq-row"><span>{{ item.name }}</span><i style="width: {{ item.percent }}%"></i><b>{{ item.count }}</b></div>{% endfor %}</article>
+        <article class="panel"><h2>낮은 평가 답변</h2>{% for item in low_feedback %}<div class="split-row"><span>{{ item.question }}</span><b class="bad">{{ item.score }}%</b></div>{% endfor %}<h2>법령 업데이트 공지</h2>{% for notice in notices %}<div class="split-row"><span>{{ notice.title }}</span><time>{{ notice.date }}</time></div>{% endfor %}</article>
+    </div>
+</section>

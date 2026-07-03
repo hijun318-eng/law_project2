@@ -1,0 +1,5 @@
+<section class="admin-page">
+    <div class="page-head"><div><h1>사용자 관리</h1><p>전체 {{ users|length }}명 · 활성 {{ active_count }}명 · 정지 {{ suspended_count }}명</p></div><button class="secondary-button">내보내기</button></div>
+    <div class="table-tools"><input data-user-search placeholder="이름 또는 이메일 검색"><select data-user-status><option value="all">전체 상태</option><option value="active">활성</option><option value="suspended">정지</option></select></div>
+    <div class="table-card"><table><thead><tr><th>사용자</th><th>가입일</th><th>마지막 접속</th><th>질문 수</th><th>상태</th><th>작업</th></tr></thead><tbody>{% for row in users %}<tr data-user-row data-status="{{ row.status }}"><td><strong>{{ row.name }}</strong><small>{{ row.email }}</small></td><td>{{ row.join_date }}</td><td>{{ row.last_login }}</td><td>{{ row.questions }}</td><td><span class="status {{ row.status }}">{% if row.status == 'active' %}활성{% else %}정지{% endif %}</span></td><td><button class="mini-button" data-toggle-status>{% if row.status == 'active' %}계정 정지{% else %}정지 해제{% endif %}</button></td></tr>{% endfor %}</tbody></table></div>
+</section>

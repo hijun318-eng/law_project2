@@ -1,0 +1,258 @@
+.side-nav-label {
+    display: block;
+    margin: 16px 0 6px;
+    padding: 0 14px;
+    color: rgba(255,255,255,.32);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+.side-nav-label:first-child { margin-top: 4px; }
+
+.section-label { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 24px 0 12px; }
+.bad-label { color: var(--red); }
+.bad-label small { color: var(--muted); font-weight: 600; text-transform: none; }
+
+
+
+/* ────- Prompt Management ───── */
+.prompt-layout {
+    display: flex;
+    gap: 20px;
+    height: calc(100vh - 200px);
+    min-height: 480px;
+}
+
+.prompt-list {
+    width: 264px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+}
+.prompt-list-item {
+    text-align: left;
+    padding: 14px;
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    background: rgba(255,255,255,.6);
+    transition: background .15s ease, border-color .15s ease;
+}
+.prompt-list-item:hover { background: #fff; border-color: #e5e7eb; }
+.prompt-list-item.active { background: #fff; border-color: #bfdbfe; box-shadow: 0 1px 3px rgba(15,23,42,.06); }
+.prompt-list-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.prompt-list-top span { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .03em; }
+.dot-online { width: 6px; height: 6px; border-radius: 999px; background: #34d399; display: inline-block; }
+.prompt-list-item strong {
+    display: block;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 14px;
+    font-weight: 800;
+    color: #111827;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.prompt-list-item small { display: block; margin-top: 2px; font-size: 12px; color: #9ca3af; }
+
+.prompt-editor {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #f1f5f9;
+    border-radius: 16px;
+    overflow: hidden;
+    padding: 0;
+}
+.prompt-editor-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+}
+.prompt-editor-head > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+.prompt-editor-head h3 {
+    margin: 0;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 15px;
+    font-weight: 800;
+    color: #111827;
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    vertical-align: middle;
+}
+.prompt-editor-head p { margin: 3px 0 0; font-size: 12px; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prompt-editor-head .segmented {
+    background: #f3f4f6;
+    border: 0;
+    padding: 4px;
+    border-radius: 8px;
+    flex: 0 0 auto;         /* 추가: 절대 줄어들지 않게 */
+    display: inline-flex;    /* 추가: shrink-to-fit이 content 기준으로 계산되게 */
+    gap: 2px;
+}
+.prompt-editor-head .segmented button {
+    flex: 0 0 auto;          /* 핵심 수정: flex:1 상속 무효화 */
+    padding: 5px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    color: #6b7280;
+    background: transparent;
+    white-space: nowrap;      /* 핵심 수정: 줄바꿈 금지 */
+}
+.prompt-editor-head .segmented button.active { background: #fff; color: #111827; box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+
+
+[data-prompt-view="editor"] { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.prompt-placeholders {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;   /* 명시적으로 고정 */
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    background: rgba(248,250,252,.6);
+    flex-shrink: 0;
+}
+.prompt-placeholders::before {
+    content: "필수 플레이스홀더:";
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+.placeholder-tag {
+    display: inline-flex;
+    flex: 0 0 auto;         /* 핵심 수정: 절대 늘어나지/줄어들지 않음 */
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: "JetBrains Mono", monospace;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    color: #6b7280;
+    white-space: nowrap;      /* 핵심 수정: 태그 내부 줄바꿈 금지 */
+}
+.placeholder-tag.ok { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.placeholder-tag.ok::before { content: "✓"; }
+.placeholder-tag.missing { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+.placeholder-tag.missing::before { content: "✕"; }
+
+.prompt-textarea {
+    flex: 1;
+    min-height: 220px;
+    width: 100%;
+    border: 0;
+    padding: 20px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #1f2937;
+    resize: none;
+    outline: none;
+}
+
+.notice-box.red {
+    margin: 0 20px 12px;
+    padding: 12px 14px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: #b91c1c;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+.notice-box.red p { margin: 2px 0; }
+
+.prompt-test { border-top: 1px solid #f1f5f9; flex-shrink: 0; }
+.prompt-test > button[data-toggle-test] {
+    width: 100%;
+    text-align: left;
+    padding: 12px 20px;
+    background: transparent;
+    border: 0;
+    color: #4b5563;
+    font-size: 13px;
+    font-weight: 600;
+}
+.prompt-test > button[data-toggle-test]:hover { background: #f9fafb; }
+.prompt-test-body { padding: 0 20px 16px; }
+.prompt-test-body .composer { padding: 0; gap: 8px; }
+.prompt-test-body input { border: 1px solid #e5e7eb; border-radius: 10px; padding: 9px 12px; font-size: 13px; }
+.prompt-test-body button#promptTestBtn { border-radius: 8px; padding: 9px 16px; font-size: 13px; }
+.prompt-test-body .result-box { margin-top: 10px; padding: 12px 14px; font-size: 12px; line-height: 1.7; white-space: pre-line; }
+
+.prompt-save-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-top: 1px solid #f1f5f9;
+    background: rgba(248,250,252,.7);
+    flex-shrink: 0;
+}
+#promptSaveStatus { font-size: 12px; color: #9ca3af; }
+#promptSaveStatus.success { color: #059669; font-weight: 700; }
+#promptSaveBtn { padding: 9px 20px; border-radius: 10px; font-size: 13px; font-weight: 700; }
+
+/* History list inside editor */
+[data-prompt-view="history"] { padding: 16px 20px; overflow-y: auto; gap: 10px; }
+[data-prompt-view="history"] .list-card {
+    border-radius: 12px;
+    padding: 14px;
+    border-color: #f1f5f9;
+}
+[data-prompt-view="history"] .list-card:first-child { border-color: #bfdbfe; background: rgba(239,246,255,.4); }
+[data-prompt-view="history"] .list-card span { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 13px; color: #111827; }
+[data-prompt-view="history"] .list-card strong { font-size: 12px; font-weight: 600; color: #374151; }
+[data-prompt-view="history"] .list-card time { font-family: "JetBrains Mono", monospace; }
+[data-prompt-view="history"] .list-card [data-rollback] { justify-self: start; margin-top: 4px; }
+
+/* Confirm modal (centered, not side drawer) */
+.prompt-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.prompt-confirm-overlay .drawer-backdrop { background: rgba(0,0,0,.4); }
+.prompt-confirm-overlay .drawer-panel {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    padding: 24px;
+}
+.prompt-confirm-overlay header { border: 0; margin: 0 0 14px; }
+.prompt-confirm-overlay h2 { font-size: 16px; }
+
+
+
+
+
+.vectordb-progress { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.progress-track { flex: 1; height: 6px; border-radius: 999px; background: #f1f5f9; overflow: hidden; }
+.progress-fill { height: 100%; width: 0%; background: var(--blue); transition: width .15s linear; }

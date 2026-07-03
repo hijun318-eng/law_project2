@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+__pycache__
+*.pyc
+.omo/
+.sisyphus/
+doc/
+vector_db/
+data/
+**/db.sqlite3
+pyrightconfig.json

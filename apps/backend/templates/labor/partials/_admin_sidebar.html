@@ -1,0 +1,22 @@
+<aside class="sidebar">
+    <div class="sidebar-head">
+        <a class="brand brand-light" href="{% url 'admin_console' %}"><span class="brand-mark">§</span><span>노동OK</span></a>
+        <small>관리자 콘솔</small>
+    </div>
+    <nav class="side-nav">
+        <span class="side-nav-label">운영 관리</span>
+        <a class="{% if tab == 'dashboard' %}active{% endif %}" href="{% url 'admin_console' %}?tab=dashboard">대시보드</a>
+        <a class="{% if tab == 'users' %}active{% endif %}" href="{% url 'admin_console' %}?tab=users">사용자 관리</a>
+        <a class="{% if tab == 'feedback' %}active{% endif %}" href="{% url 'admin_console' %}?tab=feedback">피드백 관리</a>
+
+        <span class="side-nav-label">시스템 관리</span>
+        <a class="{% if tab == 'prompts' %}active{% endif %}" href="{% url 'admin_console' %}?tab=prompts">프롬프트 관리</a>
+        <a class="{% if tab == 'vectordb' %}active{% endif %}" href="{% url 'admin_console' %}?tab=vectordb">데이터 / 벡터DB</a>
+        <a class="{% if tab == 'performance' %}active{% endif %}" href="{% url 'admin_console' %}?tab=performance">성능 모니터링</a>
+    </nav>
+    <div class="sidebar-user">
+        <div class="avatar danger">관</div>
+        <div><strong>{{ user.name }}</strong><span>슈퍼 관리자</span></div>
+        <a href="{% url 'logout' %}">로그아웃</a>
+    </div>
+</aside>

@@ -1,0 +1,65 @@
+<section class="admin-page">
+    <div class="page-head">
+        <div><h1>데이터 / 벡터DB 관리</h1><p>법령·판례·질의회시 벡터 DB 상태 확인 및 재구축</p></div>
+    </div>
+
+    <div class="stat-grid three" id="vectorDbGrid">
+        {% for db in vector_dbs %}
+        <article class="panel vectordb-card" data-db-id="{{ db.id }}" data-db-status="{{ db.status }}">
+            <div class="page-head" style="margin-bottom:14px;">
+                <div>
+                    <h2 style="font-size:14px; margin:0 0 6px;">{{ db.name }}</h2>
+                    <span class="status {% if db.status == 'healthy' %}active{% else %}suspended{% endif %}" data-db-status-label>
+                        {% if db.status == 'healthy' %}정상{% elif db.status == 'outdated' %}갱신 필요{% elif db.status == 'building' %}재구축 중{% else %}오류{% endif %}
+                    </span>
+                </div>
+                <button type="button" class="mini-button" data-rebuild-db>재구축</button>
+            </div>
+            <div class="vectordb-progress" data-progress-row hidden>
+                <div class="progress-track"><div class="progress-fill" data-progress-fill></div></div>
+                <small data-progress-label>0%</small>
+            </div>
+            <div class="split-row"><span>임베딩 문서 수</span><b>{{ db.doc_count }}건</b></div>
+            <div class="split-row"><span>DB 크기</span><b>{{ db.size }}</b></div>
+            <div class="split-row"><span>최근 빌드</span><b>{{ db.last_build }}</b></div>
+        </article>
+        {% endfor %}
+    </div>
+
+    <div class="tabs" data-vectordb-tabs>
+        <button class="active" type="button" data-vectordb-tab="upload">업로드 이력</button>
+        <button type="button" data-vectordb-tab="failed">임베딩 실패 ({{ failed_embeddings|length }})</button>
+    </div>
+
+    <div data-vectordb-panel="upload" class="table-card">
+        <table>
+            <thead><tr><th>파일명</th><th>유형</th><th>크기</th><th>업로드 일시</th><th>문서 수</th><th>상태</th></tr></thead>
+            <tbody>
+                {% for u in upload_history %}
+                <tr>
+                    <td class="mono">{{ u.filename }}</td>
+                    <td><span class="status active">{{ u.type }}</span></td>
+                    <td>{{ u.size }}</td>
+                    <td><small>{{ u.uploaded_at }}</small></td>
+                    <td>{{ u.docs }}건</td>
+                    <td><span class="status active">완료</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div data-vectordb-panel="failed" class="stack-list" hidden>
+        {% for f in failed_embeddings %}
+        <article class="feedback-card low" data-failed-id="{{ f.id }}">
+            <header><span>{{ f.type }}</span><b>{{ f.reason }}</b></header>
+            <h2 class="mono">{{ f.filename }}</h2>
+            <div class="feedback-meter"><span>{{ f.failed_at }}</span>
+                <button type="button" class="mini-button" data-reprocess>재처리</button>
+            </div>
+        </article>
+        {% empty %}
+        <div class="empty-state">임베딩 실패 문서가 없습니다</div>
+        {% endfor %}
+    </div>
+</section>

@@ -1,0 +1,165 @@
+{
+  "form_id": "sex_discrimination_correction",
+  "form_name": "고용상 성차별·직장 내 성희롱 시정신청서",
+
+  "sections": [
+
+    {
+      "id": "applicant",
+      "title": "신청인",
+
+      "fields": [
+
+        {
+          "key": "applicant_name",
+          "label": "성명",
+          "type": "text"
+        },
+
+        {
+          "key": "birth_date",
+          "label": "생년월일",
+          "type": "text"
+        },
+
+        {
+          "key": "gender",
+          "label": "성별",
+          "type": "radio",
+          "options": [
+            "남",
+            "여"
+          ]
+        },
+
+        {
+          "key": "address",
+          "label": "주소",
+          "type": "text"
+        },
+
+        {
+          "key": "contact",
+          "label": "연락처",
+          "type": "text"
+        },
+
+        {
+          "key": "position",
+          "label": "직위 및 담당업무",
+          "type": "text"
+        },
+
+        {
+          "key": "employment_period",
+          "label": "근무기간",
+          "type": "text"
+        },
+
+        {
+          "key": "incident_date",
+          "label": "차별적 처우 등 발생일",
+          "type": "date"
+        },
+
+        {
+          "key": "employment_type",
+          "label": "고용형태",
+          "type": "radio",
+          "options": [
+            "기간제근로자",
+            "단시간근로자",
+            "무기계약직근로자"
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "employer",
+      "title": "피신청인(사업주)",
+
+      "fields": [
+
+        {
+          "key": "company_name",
+          "label": "사업장명",
+          "type": "text"
+        },
+
+        {
+          "key": "representative",
+          "label": "대표자",
+          "type": "text"
+        },
+
+        {
+          "key": "company_address",
+          "label": "소재지",
+          "type": "text"
+        },
+
+        {
+          "key": "business_type",
+          "label": "사업종류",
+          "type": "text"
+        },
+
+        {
+          "key": "employee_count",
+          "label": "근로자수",
+          "type": "number"
+        }
+      ]
+    },
+
+    {
+      "id": "claim_purpose",
+      "title": "신청취지",
+
+      "fields": [
+
+        {
+          "key": "claim_purpose_1",
+          "label": "신청취지 1",
+          "type": "textarea"
+        },
+
+        {
+          "key": "claim_purpose_2",
+          "label": "신청취지 2",
+          "type": "textarea"
+        }
+      ]
+    },
+
+    {
+      "id": "claim_reason",
+      "title": "신청이유",
+
+      "fields": [
+
+        {
+          "key": "discrimination_details",
+          "label": "차별적 처우 등 내용",
+          "type": "textarea"
+        }
+      ]
+    },
+
+    {
+      "id": "attachments",
+      "title": "첨부자료",
+
+      "fields": [
+
+        {
+          "key": "attachments",
+          "label": "차별적 처우 입증자료",
+          "type": "file",
+          "multiple": true
+        }
+      ]
+    }
+  ]
+}

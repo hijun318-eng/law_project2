@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>법정 수당 계산기</title>
+</head>
+<body>
+    <h1>법정 수당 계산기</h1>
+    <form id="calc-form">
+        {% csrf_token %}
+        <div>
+            <label for="question">질문을 입력하세요:</label>
+            <textarea id="question" name="question" rows="4" cols="50" placeholder="예: 퇴직금 계산해줘, 해고예고수당 계산해줘"></textarea>
+        </div>
+        <button type="submit">계산하기</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('calc-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const question = document.getElementById('question').value;
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                const response = await fetch('', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({ question: question })
+                });
+                const data = await response.json();
+                resultDiv.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                resultDiv.innerHTML = '<p style="color: red;">오류가 발생했습니다.</p>';
+            }
+        });
+    </script>
+</body>
+</html>

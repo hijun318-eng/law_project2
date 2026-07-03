@@ -1,0 +1,25 @@
+{% extends "labor/base.html" %}
+{% load static %}
+{% block body_class %}app-body{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'labor/css/admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="workspace admin-workspace">
+    {% include "labor/partials/_admin_sidebar.html" %}
+    <main class="workspace-main admin-main">
+        {% if tab == 'dashboard' %}{% include "labor/partials/_admin_dashboard.html" %}{% endif %}
+        {% if tab == 'users' %}{% include "labor/partials/_admin_users.html" %}{% endif %}
+        {% if tab == 'feedback' %}{% include "labor/partials/_admin_feedback.html" %}{% endif %}
+        {% if tab == 'prompts' %}{% include "labor/partials/_admin_prompts.html" %}{% endif %}
+        {% if tab == 'vectordb' %}{% include "labor/partials/_admin_vectordb.html" %}{% endif %}
+        {% if tab == 'performance' %}{% include "labor/partials/_admin_performance.html" %}{% endif %}
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script type="module" src="{% static 'labor/js/admin-main.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,228 @@
+{
+  "form_id": "unfair_dismissal",
+  "form_name": "부당해고 등 구제신청서",
+
+  "sections": [
+
+    {
+      "id": "union",
+      "title": "노동조합",
+
+      "fields": [
+
+        {
+          "key": "union_name",
+          "label": "명칭",
+          "type": "text"
+        },
+
+        {
+          "key": "union_representative",
+          "label": "대표자",
+          "type": "text"
+        },
+
+        {
+          "key": "union_address",
+          "label": "소재지",
+          "type": "text"
+        },
+
+        {
+          "key": "union_email",
+          "label": "이메일",
+          "type": "text"
+        },
+
+        {
+          "key": "union_phone",
+          "label": "전화번호",
+          "type": "text"
+        }
+      ]
+    },
+
+    {
+      "id": "worker",
+      "title": "근로자",
+
+      "fields": [
+
+        {
+          "key": "worker_name",
+          "label": "성명",
+          "type": "text"
+        },
+
+        {
+          "key": "worker_birth",
+          "label": "생년월일",
+          "type": "text"
+        },
+
+        {
+          "key": "worker_gender",
+          "label": "성별",
+          "type": "radio",
+          "options": [
+            "남",
+            "여"
+          ]
+        },
+
+        {
+          "key": "worker_address",
+          "label": "주소",
+          "type": "text"
+        },
+
+        {
+          "key": "worker_email",
+          "label": "이메일",
+          "type": "text"
+        },
+
+        {
+          "key": "worker_phone",
+          "label": "전화번호",
+          "type": "text"
+        }
+      ]
+    },
+
+    {
+      "id": "employer",
+      "title": "사용자",
+
+      "fields": [
+
+        {
+          "key": "company_name",
+          "label": "사업체명",
+          "type": "text"
+        },
+
+        {
+          "key": "company_representative",
+          "label": "대표자",
+          "type": "text"
+        },
+
+        {
+          "key": "company_address",
+          "label": "소재지",
+          "type": "text"
+        },
+
+        {
+          "key": "company_phone",
+          "label": "전화번호",
+          "type": "text"
+        }
+      ]
+    },
+
+    {
+      "id": "workplace",
+      "title": "해고등 또는 부당노동행위 사업장",
+
+      "fields": [
+
+        {
+          "key": "workplace_name",
+          "label": "사업장명",
+          "type": "text"
+        },
+
+        {
+          "key": "workplace_address",
+          "label": "소재지",
+          "type": "text"
+        },
+
+        {
+          "key": "workplace_representative",
+          "label": "대표자(직위 및 성명)",
+          "type": "text"
+        }
+      ]
+    },
+
+    {
+      "id": "claim_purpose",
+      "title": "신청취지",
+
+      "fields": [
+
+        {
+          "key": "claim_purpose_1",
+          "label": "신청취지 1",
+          "type": "textarea"
+        },
+
+        {
+          "key": "claim_purpose_2",
+          "label": "신청취지 2",
+          "type": "textarea"
+        },
+
+        {
+          "key": "contract_renewal_dispute",
+          "label": "계약갱신 또는 무기계약 전환 분쟁 여부",
+          "type": "radio",
+          "options": [
+            "예",
+            "아니오"
+          ]
+        },
+
+        {
+          "key": "contract_start_date",
+          "label": "근로계약 시작일",
+          "type": "date"
+        },
+
+        {
+          "key": "contract_end_date",
+          "label": "근로계약 종료일",
+          "type": "date"
+        }
+      ]
+    },
+
+    {
+      "id": "claim_reason",
+      "title": "신청이유",
+
+      "fields": [
+
+        {
+          "key": "event_history",
+          "label": "해고 등이나 부당노동행위 경위",
+          "type": "textarea"
+        },
+
+        {
+          "key": "illegal_reason",
+          "label": "부당한 이유",
+          "type": "textarea"
+        }
+      ]
+    },
+
+    {
+      "id": "attachments",
+      "title": "첨부자료",
+
+      "fields": [
+
+        {
+          "key": "attachments",
+          "label": "첨부자료",
+          "type": "file",
+          "multiple": true
+        }
+      ]
+    }
+  ]
+}

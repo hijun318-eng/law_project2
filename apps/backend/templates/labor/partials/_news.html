@@ -1,0 +1,23 @@
+<section class="content-narrow" data-news-api="{% url 'news_api' %}">
+    <h1>최신 노동법 뉴스</h1>
+    <p class="lead">카테고리나 자연어 질의로 노동법 관련 소식을 찾아보세요</p>
+    <form class="search-panel" id="newsForm">
+        <input id="newsQuery" placeholder="예: 대기업 노조 관련 뉴스 알려줘" value="대기업 노조 관련 뉴스 알려줘">
+        <button type="submit">검색</button>
+    </form>
+    <div class="chips" id="newsCategories">
+        {% for category in news_categories %}
+            <button class="{% if forloop.first %}active{% endif %}" type="button" data-category="{{ category }}">{{ category }}</button>
+        {% endfor %}
+    </div>
+    <div class="summary-box" id="newsSummary">{{ news_summary }}</div>
+    <div class="news-list" id="newsList">
+        {% for news in news_items %}
+            <article class="news-card">
+                <header><span>{{ news.category }}</span><time>{{ news.date }}</time></header>
+                <h2>{{ news.title }}</h2>
+                <p>{{ news.summary }}</p>
+            </article>
+        {% endfor %}
+    </div>
+</section>
