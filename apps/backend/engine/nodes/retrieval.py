@@ -26,7 +26,7 @@ def _call_ranker(query: str, documents: list[str], timeout: int = 30) -> list[fl
         logger.warning(f'랭커 호출 실패: {e}')
         return [0.5] * len(documents)
 
-from engine.database import law_db, precedent_db
+from engine.database import precedent_db
 from engine.retrievers.law_retriever import law_retriever
 from engine.utils.law_normalizer import normalize_law_name, normalize_article_no
 

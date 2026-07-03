@@ -2,6 +2,7 @@
 
 from django.http import StreamingHttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
+from django.views.decorators.csrf import csrf_exempt
 import json
 
 from .models import ChatHistory
@@ -13,6 +14,7 @@ from engine.tools.news_search_tool import NewsSearchTool
 router_engine = LawRouterEngine()
 
 
+@csrf_exempt
 def chat_view(request):
     """통합 chat view — GET: 템플릿, POST: SSE 스트리밍 또는 동기식 처리"""
     if request.method == 'POST':

@@ -1,5 +1,6 @@
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import CalculatorHistory
 from engine.calculator_engine import CalculatorEngine
@@ -7,6 +8,7 @@ from engine.calculator_engine import CalculatorEngine
 calc_engine = CalculatorEngine()
 
 
+@csrf_exempt
 def calculator_view(request):
     if request.method == 'POST':
         try:
