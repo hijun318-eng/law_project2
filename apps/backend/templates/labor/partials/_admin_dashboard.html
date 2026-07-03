@@ -1,10 +1,83 @@
 <section class="admin-page">
     <div class="page-head"><div><h1>관리자 대시보드</h1><p>2026년 7월 1일 기준</p></div><button class="secondary-button">새로고침</button></div>
     <div class="stat-grid">{% for stat in stats %}<article class="stat-card {{ stat.tone }}"><span>{{ stat.change }}</span><strong>{{ stat.value }}</strong><p>{{ stat.label }}</p></article>{% endfor %}</div>
+
     <div class="admin-grid">
-        <article class="panel wide"><h2>일별 현황</h2><div class="bar-chart">{% for item in daily %}<div><span class="bar q" style="height: {{ item.question_height }}%"></span><span class="bar u" style="height: {{ item.user_height }}%"></span><small>{{ item.date }}</small></div>{% endfor %}</div></article>
-        <article class="panel"><h2>카테고리 분포</h2>{% for item in categories %}<div class="metric-row"><span>{{ item.name }}</span><meter value="{{ item.value }}" min="0" max="30"></meter><b>{{ item.value }}%</b></div>{% endfor %}</article>
-        <article class="panel"><h2>자주 묻는 질문 TOP 7</h2>{% for item in faq %}<div class="faq-row"><span>{{ item.name }}</span><i style="width: {{ item.percent }}%"></i><b>{{ item.count }}</b></div>{% endfor %}</article>
-        <article class="panel"><h2>낮은 평가 답변</h2>{% for item in low_feedback %}<div class="split-row"><span>{{ item.question }}</span><b class="bad">{{ item.score }}%</b></div>{% endfor %}<h2>법령 업데이트 공지</h2>{% for notice in notices %}<div class="split-row"><span>{{ notice.title }}</span><time>{{ notice.date }}</time></div>{% endfor %}</article>
+        <article class="panel wide">
+            <h2>일별 현황</h2>
+            <div class="chart-legend">
+                <span><i class="legend-dot q"></i>질문 수</span>
+                <span><i class="legend-dot u"></i>사용자 수</span>
+            </div>
+            <div class="bar-chart">
+                {% for item in daily %}
+                <div>
+                    <span class="bar q" style="height: {{ item.question_height }}%"></span>
+                    <span class="bar u" style="height: {{ item.user_height }}%"></span>
+                    <small>{{ item.date }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="panel">
+            <h2>카테고리 분포</h2>
+            <div class="donut-wrap">
+                <div class="donut" data-donut>
+                    {% for item in categories %}
+                        <span class="donut-segment" data-value="{{ item.value }}"></span>
+                    {% endfor %}
+                </div>
+                <ul class="donut-legend">
+                    {% for item in categories %}
+                        <li><span class="legend-dot" data-dot="{{ forloop.counter0 }}"></span>{{ item.name }}<b>{{ item.value }}%</b></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </article>
+    </div>
+
+    <div class="admin-grid">
+        <article class="panel wide">
+            <h2>카테고리별 증감 추이</h2>
+            <p class="panel-sub">전주 대비 질문 비중 변화</p>
+            <div class="trend-chart">
+                {% for item in category_trends %}
+                <div class="trend-bar-row">
+                    <span class="trend-label">{{ item.name }}</span>
+                    <div class="trend-track">
+                        {% if item.direction == 'up' %}
+                            <span class="trend-bar up" style="width: {{ item.bar_width }}%;"></span>
+                        {% elif item.direction == 'down' %}
+                            <span class="trend-bar down" style="width: {{ item.bar_width }}%;"></span>
+                        {% endif %}
+                    </div>
+                    <b class="trend-value trend-{{ item.direction }}">{{ item.change_display }}</b>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="panel">
+            <div class="panel-head">
+                <h2>사용자 현황</h2>
+                <a class="mini-button" href="{% url 'admin_console' %}?tab=users">사용자 관리 →</a>
+            </div>
+            <div class="user-summary">
+                <div><strong>{{ total_users }}</strong><span>전체</span></div>
+                <div><strong>{{ active_users }}</strong><span>활성</span></div>
+                <div><strong>{{ suspended_users }}</strong><span>비활성</span></div>
+            </div>
+
+            <div class="panel-divider"></div>
+
+            <div class="panel-head">
+                <h2>낮은 평가 답변</h2>
+                <a class="mini-button" href="{% url 'admin_console' %}?tab=feedback">전체 보기 →</a>
+            </div>
+            {% for item in low_feedback %}
+                <div class="split-row"><span>{{ item.category }}</span><b class="bad">{{ item.score }}%</b></div>
+            {% endfor %}
+        </article>
     </div>
 </section>

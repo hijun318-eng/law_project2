@@ -1,12 +1,6 @@
-import { initSidebar } from "./sidebar.js";
-import { initAdvice } from "./advice.js";
-import { initCalculator } from "./calculator.js";
-import { initNews } from "./news.js";
-import { initMypage } from "./mypage.js";
-
 const DONUT_PALETTE = ["#2563eb", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
 
-export function initCategoryDonut() {
+function initCategoryDonut() {
     const donut = document.querySelector("[data-donut]");
     if (!donut) return;
 
@@ -27,8 +21,6 @@ export function initCategoryDonut() {
     });
 }
 
-initSidebar();
-initAdvice();
-initCalculator();
-initNews();
-initMypage();
+export function initAdminDashboard() {
+    initCategoryDonut();
+}

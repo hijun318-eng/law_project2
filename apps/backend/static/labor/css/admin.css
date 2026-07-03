@@ -14,6 +14,63 @@
 .bad-label { color: var(--red); }
 .bad-label small { color: var(--muted); font-weight: 600; text-transform: none; }
 
+/*  대시보드  */
+.chart-legend { display: flex; gap: 18px; margin-bottom: 14px; font-size: 12px; color: var(--muted); }
+.legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.legend-dot.q { background: var(--primary); }
+.legend-dot.u { background: var(--amber); }
+.bar.q { background: var(--primary); }
+.bar.u { background: var(--amber); }
+
+.panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.panel-head h2 { margin: 0; }
+
+.user-summary { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; gap: 8px; margin-bottom: 18px; }
+.user-summary strong { display: block; font-size: 22px; }
+.user-summary span { color: var(--muted); font-size: 12px; }
+.panel-divider { height: 1px; background: var(--line); margin: 18px 0; }
+
+.trend-chart { display: grid; gap: 12px; }
+.trend-bar-row { display: grid; grid-template-columns: 100px 1fr 60px; align-items: center; gap: 10px; font-size: 13px; }
+.trend-label { color: #374151; }
+.trend-track { position: relative; height: 16px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+.trend-track::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--line); z-index: 1; }
+.trend-bar { position: absolute; top: 2px; bottom: 2px; border-radius: 3px; }
+.trend-bar.up { left: 50%; background: var(--red); }
+.trend-bar.down { right: 50%; background: var(--primary); }
+.trend-value { text-align: right; font-weight: 800; }
+.trend-up { color: var(--red); }
+.trend-down { color: var(--primary); }
+.trend-flat { color: var(--muted); }
+
+.donut-wrap { display: flex; align-items: center; gap: 24px; }
+.donut {
+    width: 150px;
+    height: 150px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: conic-gradient(var(--donut-gradient, #e5e7eb 0deg 360deg));
+    position: relative;
+}
+.donut::after {
+    content: "";
+    position: absolute;
+    inset: 24%;
+    border-radius: 50%;
+    background: #fff;
+}
+.donut-segment { display: none; }
+.donut-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 13px; }
+.donut-legend li { display: flex; align-items: center; }
+.donut-legend b { margin-left: auto; color: var(--muted); }
+
+
+.panel-sub { margin: -8px 0 14px; color: var(--muted); font-size: 12px; }
+.trend-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
+.trend-row:last-child { border-bottom: 0; }
+.trend-up { color: var(--red); font-weight: 800; }
+.trend-down { color: var(--primary); font-weight: 800; }
+.trend-flat { color: var(--muted); font-weight: 800; }
 
 
 /* ────- Prompt Management ───── */
@@ -256,3 +313,6 @@
 .vectordb-progress { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .progress-track { flex: 1; height: 6px; border-radius: 999px; background: #f1f5f9; overflow: hidden; }
 .progress-fill { height: 100%; width: 0%; background: var(--blue); transition: width .15s linear; }
+
+
+.empty-state { text-align: center; padding: 32px 0; color: var(--muted); font-size: 14px; }

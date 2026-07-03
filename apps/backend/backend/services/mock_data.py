@@ -31,12 +31,21 @@ FAQ_DATA = [
 ]
 
 CATEGORY_PIE = [
-    {"name": "임금체불", "value": 28},
-    {"name": "부당해고", "value": 23},
-    {"name": "퇴직금", "value": 16},
-    {"name": "연차휴가", "value": 13},
-    {"name": "최저임금", "value": 11},
-    {"name": "기타", "value": 9},
+    {"name": "임금체불", "value": 27},
+    {"name": "부당해고", "value": 22},
+    {"name": "퇴직금", "value": 15},
+    {"name": "연차휴가", "value": 12},
+    {"name": "최저임금", "value": 10},
+    {"name": "직장내괴롭힘", "value": 8},
+    {"name": "산업재해", "value": 6},
+]
+
+CATEGORY_TRENDS = [
+    {"name": "임금체불", "change": 8},
+    {"name": "부당해고", "change": -3},
+    {"name": "연차휴가", "change": 0},
+    {"name": "산업재해", "change": 5},
+    {"name": "근로계약", "change": -2},
 ]
 
 DAILY_DATA = [

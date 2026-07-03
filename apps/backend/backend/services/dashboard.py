@@ -1,9 +1,23 @@
-from .mock_data import CATEGORY_PIE, DAILY_DATA, FAQ_DATA, FEEDBACK_DATA, MOCK_USERS
+from .mock_data import CATEGORY_PIE, CATEGORY_TRENDS, DAILY_DATA, FEEDBACK_DATA, MOCK_USERS
 
 
 def dashboard_context() -> dict:
     max_questions = max(item["questions"] for item in DAILY_DATA)
-    max_faq = max(item["count"] for item in FAQ_DATA)
+    max_abs_change = max(abs(item["change"]) for item in CATEGORY_TRENDS) or 1
+
+    trends = []
+    for item in CATEGORY_TRENDS:
+        change = item["change"]
+        direction = "up" if change > 0 else "down" if change < 0 else "flat"
+        trends.append({
+            "name": item["name"],
+            "direction": direction,
+            "change_display": f"+{change}%p" if change > 0 else (f"{change}%p" if change < 0 else "±0%p"),
+            "bar_width": round(abs(change) / max_abs_change * 45, 1),  # 절반 트랙(50%) 기준, 여백 위해 45%로 제한
+        })
+
+    active_users = sum(1 for user in MOCK_USERS if user["status"] == "active")
+
     return {
         "stats": [
             {"label": "오늘 질문 수", "value": "84", "change": "+12%", "tone": "blue"},
@@ -13,12 +27,11 @@ def dashboard_context() -> dict:
         ],
         "daily": [{**item, "question_height": round(item["questions"] / max_questions * 100), "user_height": round(item["users"] / max_questions * 100)} for item in DAILY_DATA],
         "categories": CATEGORY_PIE,
-        "faq": [{**item, "percent": round(item["count"] / max_faq * 100)} for item in FAQ_DATA],
+        "category_trends": trends,
         "low_feedback": [item for item in FEEDBACK_DATA if item["score"] < 60],
-        "notices": [
-            {"id": 1, "title": "2026년 최저임금 고시 반영 완료", "date": "2026-06-28", "type": "법령"},
-            {"id": 2, "title": "포괄임금제 행정지침 업데이트", "date": "2026-06-20", "type": "지침"},
-        ],
+        "total_users": len(MOCK_USERS),
+        "active_users": active_users,
+        "suspended_users": len(MOCK_USERS) - active_users,
     }
 
 
