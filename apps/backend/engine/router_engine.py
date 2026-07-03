@@ -76,8 +76,8 @@ class LawRouterEngine:
         else:
             mode = str(mode_raw).strip().lower()
             
-        # 🚀 디버깅 로그
-        print(f"\n🚦 [라우터 판단 결과] '{mode}'\n")
+        # 디버깅 로그
+        print(f"\n[라우터 판단 결과] '{mode}'\n")
 
         if mode in {
             ROUTE_CASE_BASED_ANSWER,
