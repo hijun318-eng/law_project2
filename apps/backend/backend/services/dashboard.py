@@ -46,7 +46,7 @@ DAILY_DATA = [
     {"date": "7/1", "questions": 38, "users": 9},
 ]
 
-from backend.services.mock_data import FEEDBACK_DATA
+from chat.models import ChatHistory
 
 
 def dashboard_context() -> dict:
@@ -91,31 +91,36 @@ def users_context() -> dict:
     active_count = sum(1 for user in MOCK_USERS if user["status"] == "active")
     return {"users": MOCK_USERS, "active_count": active_count, "suspended_count": len(MOCK_USERS) - active_count}
 
-from collections import defaultdict
-
-
 def feedback_context() -> dict:
-    total_likes = sum(item["likes"] for item in FEEDBACK_DATA)
-    total_dislikes = sum(item["dislikes"] for item in FEEDBACK_DATA)
+    from collections import defaultdict
+
+    feedback_qs = ChatHistory.objects.filter(feedback__isnull=False)
+    total_likes = feedback_qs.filter(feedback=True).count()
+    total_dislikes = feedback_qs.filter(feedback=False).count()
     total_votes = total_likes + total_dislikes
     avg_score = round(total_likes / total_votes * 100, 1) if total_votes > 0 else 0
 
+    # Group by mode (rag, calculator, etc.) as category
+    records = list(feedback_qs.values("mode", "feedback", "created_at"))
     grouped: dict[str, list] = {}
-    for item in FEEDBACK_DATA:
-        grouped.setdefault(item["category"], []).append(item)
+    for r in records:
+        cat = r["mode"] or "rag"
+        grouped.setdefault(cat, []).append(r)
 
     category_groups = []
     for category, items in grouped.items():
-        likes = sum(i["likes"] for i in items)
-        dislikes = sum(i["dislikes"] for i in items)
+        likes = sum(1 for i in items if i["feedback"] is True)
+        dislikes = sum(1 for i in items if i["feedback"] is False)
         total = likes + dislikes
         score = round(likes / total * 100) if total > 0 else 0
 
         by_date: dict[str, dict] = defaultdict(lambda: {"likes": 0, "dislikes": 0})
         for i in items:
-            date_key = i["created_at"].split(" ")[0][5:]
-            by_date[date_key]["likes"] += i["likes"]
-            by_date[date_key]["dislikes"] += i["dislikes"]
+            date_key = i["created_at"].strftime("%m-%d") if i["created_at"] else "unknown"
+            if i["feedback"] is True:
+                by_date[date_key]["likes"] += 1
+            elif i["feedback"] is False:
+                by_date[date_key]["dislikes"] += 1
 
         sorted_dates = sorted(by_date.keys())
         day_totals = {d: by_date[d]["likes"] + by_date[d]["dislikes"] for d in sorted_dates}
@@ -149,7 +154,7 @@ def feedback_context() -> dict:
 
     return {
         "category_groups": category_groups,
-        "score_ranking": category_groups, 
+        "score_ranking": category_groups,
         "low_category_count": sum(1 for g in category_groups if g["needs_attention"]),
         "total_likes": f"{total_likes:,}",
         "total_dislikes": f"{total_dislikes:,}",

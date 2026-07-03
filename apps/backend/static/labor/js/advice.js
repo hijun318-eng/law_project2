@@ -18,7 +18,7 @@ export function initAdvice() {
         appendMessage(messages, "ai", "답변을 준비하고 있습니다...");
         postJson(adviceSection.dataset.adviceApi, { question }).then((data) => {
             messages.lastElementChild.remove();
-            appendMessage(messages, "ai", data.answer, true);
+            appendMessage(messages, "ai", data.answer, true, false, data.message_id);
         });
     };
 
@@ -32,7 +32,30 @@ export function initAdvice() {
         input.value = "";
     });
     messages?.addEventListener("click", (event) => {
-        if (event.target.closest("[data-open-drawer]")) drawer.hidden = false;
+        const drawerBtn = event.target.closest("[data-open-drawer]");
+        if (drawerBtn) { drawer.hidden = false; return; }
+
+        const fbBtn = event.target.closest("[data-action^='feedback_']");
+        if (!fbBtn) return;
+        const messageId = fbBtn.dataset.mid;
+        const action = fbBtn.dataset.action === "feedback_like" ? "like" : "dislike";
+        postJson(adviceSection.dataset.adviceFeedbackApi, { message_id: parseInt(messageId), action }).then((res) => {
+            if (!res.ok) return;
+            const parent = fbBtn.closest(".message-actions");
+            if (parent) {
+                parent.querySelectorAll("[data-action^='feedback_']").forEach((b) => {
+                    b.classList.remove("active");
+                    b.textContent = b.textContent.replace("✓ ", "");
+                });
+            }
+            if (res.feedback === true) {
+                const likeBtn = parent?.querySelector("[data-action='feedback_like']");
+                if (likeBtn) { likeBtn.classList.add("active"); likeBtn.textContent = "✓ " + likeBtn.textContent; }
+            } else if (res.feedback === false) {
+                const dislikeBtn = parent?.querySelector("[data-action='feedback_dislike']");
+                if (dislikeBtn) { dislikeBtn.classList.add("active"); dislikeBtn.textContent = "✓ " + dislikeBtn.textContent; }
+            }
+        });
     });
     document.querySelectorAll("[data-close-drawer]").forEach((node) =>
         node.addEventListener("click", () => drawer.hidden = true));

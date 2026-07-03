@@ -58,30 +58,6 @@ DAILY_DATA = [
     {"date": "7/1", "questions": 38, "users": 9},
 ]
 
-FEEDBACK_DATA = [
-    {"id": 1031, "category": "임금체불", "likes": 0, "dislikes": 1, "created_at": "2026-07-01 09:14"},
-    {"id": 1030, "category": "임금체불", "likes": 0, "dislikes": 1, "created_at": "2026-07-01 08:50"},
-    {"id": 1028, "category": "임금체불", "likes": 1, "dislikes": 0, "created_at": "2026-06-30 16:02"},
-    {"id": 1025, "category": "임금체불", "likes": 0, "dislikes": 1, "created_at": "2026-06-30 12:10"},
-    {"id": 1022, "category": "임금체불", "likes": 1, "dislikes": 0, "created_at": "2026-06-29 11:47"},
-
-    {"id": 1019, "category": "부당해고", "likes": 0, "dislikes": 1, "created_at": "2026-06-29 08:30"},
-    {"id": 1017, "category": "부당해고", "likes": 1, "dislikes": 0, "created_at": "2026-06-28 20:15"},
-    {"id": 1015, "category": "부당해고", "likes": 1, "dislikes": 0, "created_at": "2026-06-28 14:55"},
-
-    {"id": 1011, "category": "연차휴가", "likes": 1, "dislikes": 0, "created_at": "2026-06-27 10:20"},
-    {"id": 1010, "category": "연차휴가", "likes": 1, "dislikes": 0, "created_at": "2026-06-27 09:40"},
-    {"id": 1008, "category": "연차휴가", "likes": 1, "dislikes": 0, "created_at": "2026-06-26 09:03"},
-
-    {"id": 1005, "category": "산업재해", "likes": 0, "dislikes": 1, "created_at": "2026-06-25 17:41"},
-    {"id": 1003, "category": "산업재해", "likes": 0, "dislikes": 1, "created_at": "2026-06-25 10:05"},
-    {"id": 1002, "category": "산업재해", "likes": 0, "dislikes": 1, "created_at": "2026-06-24 13:12"},
-
-    {"id": 998, "category": "근로계약", "likes": 1, "dislikes": 0, "created_at": "2026-06-23 15:38"},
-    {"id": 996, "category": "근로계약", "likes": 1, "dislikes": 0, "created_at": "2026-06-22 18:20"},
-    {"id": 995, "category": "근로계약", "likes": 1, "dislikes": 0, "created_at": "2026-06-22 09:50"},
-]
-
 NEWS_DATA = [
     {"id": 1, "title": "2026년 최저임금 10,030원으로 확정", "date": "2026-06-28", "category": "최저임금", "summary": "고용노동부는 2026년 적용 최저임금을 시간당 10,030원으로 최종 고시했습니다. 전년 대비 1.8% 인상된 수치로, 월 209시간 기준 약 209만 6천 원에 해당합니다."},
     {"id": 2, "title": "직장 내 괴롭힘 신고 건수 역대 최고치", "date": "2026-06-25", "category": "직장내괴롭힘", "summary": "상반기 직장 내 괴롭힘 신고 건수가 전년 동기 대비 34% 증가하며 역대 최고치를 기록했습니다. 고용노동부는 사업장 실태조사를 강화할 방침입니다."},
