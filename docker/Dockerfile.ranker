@@ -1,0 +1,19 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# CPU-only PyTorch 선행 설치 (CUDA 패키지 2GB+ 방지)
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
+COPY apps/ranker/requirements.txt apps/ranker/requirements.txt
+RUN pip install --no-cache-dir -r apps/ranker/requirements.txt
+
+COPY . .
+
+WORKDIR /app/apps/ranker
+EXPOSE 8001
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8001"]

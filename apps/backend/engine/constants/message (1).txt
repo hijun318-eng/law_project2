@@ -1,0 +1,231 @@
+{
+  "form_id": "labor_complaint",
+  "form_name": "진정서",
+
+  "sections": [
+
+    {
+      "id": "complainant",
+      "title": "진정인",
+
+      "fields": [
+
+        {
+          "key": "complainant_name",
+          "label": "성명",
+          "type": "text"
+        },
+
+        {
+          "key": "complainant_rrn",
+          "label": "주민등록번호",
+          "type": "text"
+        },
+
+        {
+          "key": "complainant_address",
+          "label": "주소",
+          "type": "text"
+        },
+
+        {
+          "key": "complainant_phone",
+          "label": "전화번호",
+          "type": "text"
+        },
+
+        {
+          "key": "complainant_mobile",
+          "label": "휴대전화번호",
+          "type": "text"
+        },
+
+        {
+          "key": "complainant_email",
+          "label": "전자우편주소",
+          "type": "text"
+        },
+
+        {
+          "key": "receive_status_sms",
+          "label": "처리상황수신여부",
+          "type": "radio",
+          "options": [
+            "예",
+            "아니오"
+          ]
+        },
+
+        {
+          "key": "receive_status_portal",
+          "label": "노동포털통지여부",
+          "type": "radio",
+          "options": [
+            "예",
+            "아니오"
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "respondent",
+      "title": "피진정인",
+
+      "fields": [
+
+        {
+          "key": "respondent_name",
+          "label": "성명",
+          "type": "text"
+        },
+
+        {
+          "key": "respondent_contact",
+          "label": "연락처",
+          "type": "text"
+        },
+
+        {
+          "key": "respondent_address",
+          "label": "주소",
+          "type": "text"
+        },
+
+        {
+          "key": "workplace_type",
+          "label": "사업체 구분",
+          "type": "radio",
+          "options": [
+            "사업장",
+            "공사현장"
+          ]
+        },
+
+        {
+          "key": "company_name",
+          "label": "사업장명",
+          "type": "text"
+        },
+
+        {
+          "key": "workplace_address",
+          "label": "사업장 주소(실근무장소)",
+          "type": "text"
+        },
+
+        {
+          "key": "company_phone",
+          "label": "사업장전화번호",
+          "type": "text"
+        },
+
+        {
+          "key": "employee_count",
+          "label": "근로자 수",
+          "type": "number"
+        }
+      ]
+    },
+
+    {
+      "id": "claim_detail",
+      "title": "진정내용",
+
+      "fields": [
+
+        {
+          "key": "employment_start_date",
+          "label": "입사일",
+          "type": "date"
+        },
+
+        {
+          "key": "employment_end_date",
+          "label": "퇴사일",
+          "type": "date"
+        },
+
+        {
+          "key": "unpaid_wage_amount",
+          "label": "체불임금총액",
+          "type": "currency"
+        },
+
+        {
+          "key": "employment_status",
+          "label": "퇴직 여부",
+          "type": "radio",
+          "options": [
+            "퇴직",
+            "재직"
+          ]
+        },
+
+        {
+          "key": "unpaid_retirement_amount",
+          "label": "체불퇴직금액",
+          "type": "currency"
+        },
+
+        {
+          "key": "other_unpaid_amount",
+          "label": "기타체불금액",
+          "type": "currency"
+        },
+
+        {
+          "key": "job_description",
+          "label": "업무내용",
+          "type": "text"
+        },
+
+        {
+          "key": "salary_payday",
+          "label": "임금 지급일",
+          "type": "text"
+        },
+
+        {
+          "key": "contract_type",
+          "label": "근로계약방법",
+          "type": "radio",
+          "options": [
+            "서면",
+            "구두"
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "complaint_content",
+      "title": "내용",
+
+      "fields": [
+
+        {
+          "key": "complaint_content",
+          "label": "내용",
+          "type": "textarea",
+          "rows": 12
+        }
+      ]
+    },
+
+    {
+      "id": "attachments",
+      "title": "파일첨부",
+
+      "fields": [
+
+        {
+          "key": "attachments",
+          "label": "파일첨부",
+          "type": "file",
+          "multiple": true
+        }
+      ]
+    }
+  ]
+}
