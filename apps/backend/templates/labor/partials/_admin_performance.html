@@ -3,11 +3,11 @@
         <div><h1>성능 모니터링</h1><p>LangGraph 파이프라인 및 LLM/임베딩 API 호출 현황 (최근 30일)</p></div>
     </div>
 
-    <h2 class="section-label">LangGraph 노드 처리 시간</h2>
+    <h2 class="perf-section-title">LangGraph 노드 처리 시간</h2>
     <div class="stat-grid">
         {% for node in langgraph_nodes %}
         <article class="stat-card blue">
-            <span>{{ node.calls }}회</span>
+            <span class="card-meta">{{ node.calls }}회 호출</span>
             <p style="font-weight:700; color:var(--ink); margin-top:6px;">{{ node.label }}</p>
             <div class="split-row"><span>평균</span><b>{{ node.avg_ms }}ms</b></div>
             <div class="split-row"><span>최대</span><b class="bad">{{ node.max_ms }}ms</b></div>
@@ -16,7 +16,7 @@
     </div>
 
     <div class="page-head">
-        <h2 class="section-label" style="margin:0;">LLM · 임베딩 API 사용량</h2>
+        <h2 class="perf-section-titlel" style="margin:0;">LLM · 임베딩 API 사용량</h2>
         <div class="segmented" style="width:auto;" data-perf-period>
             <button class="active" type="button" data-period="day">일</button>
             <button type="button" data-period="week">주</button>
@@ -46,26 +46,8 @@
         <article class="panel">
             <h2>병목 노드 TOP</h2>
             {% for node in langgraph_nodes %}
-            <div class="faq-row"><span>{{ node.label }}</span><i style="width: {{ node.load_percent }}%"></i><b>{{ node.calls }}</b></div>
+            <div class="bottleneck-row"><span>{{ node.label }}</span><i style="width: {{ node.load_percent }}%"></i><b>{{ node.calls }}</b></div>
             {% endfor %}
         </article>
-    </div>
-
-    <h2 class="section-label bad-label">응답 시간 초과 질의 <small>(임계치 20초)</small></h2>
-    <div class="table-card">
-        <table>
-            <thead><tr><th>질문 내용</th><th>사용자</th><th>처리 시간</th><th>병목 노드</th><th>일시</th></tr></thead>
-            <tbody>
-                {% for q in slow_queries %}
-                <tr>
-                    <td>{{ q.question }}</td>
-                    <td>{{ q.user }}</td>
-                    <td class="bad mono">{{ q.duration_sec }}s</td>
-                    <td><span class="status suspended">{{ q.bottleneck }}</span></td>
-                    <td><small>{{ q.date }}</small></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
 </section>

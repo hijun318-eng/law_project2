@@ -76,7 +76,7 @@
                 <a class="mini-button" href="{% url 'admin_console' %}?tab=feedback">전체 보기 →</a>
             </div>
             {% for item in low_feedback %}
-                <div class="split-row"><span>{{ item.category }}</span><b class="bad">{{ item.score }}%</b></div>
+                <div class="split-row"><span>{{ item.category }}</span><b class="bad">{{ item.avg_score }}%</b></div>
             {% endfor %}
         </article>
     </div>

@@ -13,10 +13,14 @@ def dashboard_context() -> dict:
             "name": item["name"],
             "direction": direction,
             "change_display": f"+{change}%p" if change > 0 else (f"{change}%p" if change < 0 else "±0%p"),
-            "bar_width": round(abs(change) / max_abs_change * 45, 1),  # 절반 트랙(50%) 기준, 여백 위해 45%로 제한
+            "bar_width": round(abs(change) / max_abs_change * 45, 1),
         })
 
     active_users = sum(1 for user in MOCK_USERS if user["status"] == "active")
+
+    # 피드백 관리 화면과 동일한 카테고리 집계를 재사용
+    feedback_groups = feedback_context()["category_groups"]
+    low_feedback = [g for g in feedback_groups if g["needs_attention"]]
 
     return {
         "stats": [
@@ -28,7 +32,7 @@ def dashboard_context() -> dict:
         "daily": [{**item, "question_height": round(item["questions"] / max_questions * 100), "user_height": round(item["users"] / max_questions * 100)} for item in DAILY_DATA],
         "categories": CATEGORY_PIE,
         "category_trends": trends,
-        "low_feedback": [item for item in FEEDBACK_DATA if item["score"] < 60],
+        "low_feedback": low_feedback,
         "total_users": len(MOCK_USERS),
         "active_users": active_users,
         "suspended_users": len(MOCK_USERS) - active_users,
@@ -39,14 +43,66 @@ def users_context() -> dict:
     active_count = sum(1 for user in MOCK_USERS if user["status"] == "active")
     return {"users": MOCK_USERS, "active_count": active_count, "suspended_count": len(MOCK_USERS) - active_count}
 
+from collections import defaultdict
+
 
 def feedback_context() -> dict:
-    total_likes = sum(item["likes"] for item in FEEDBACK_DATA)
-    total_dislikes = sum(item["dislikes"] for item in FEEDBACK_DATA)
-    avg_score = sum(item["score"] for item in FEEDBACK_DATA) / len(FEEDBACK_DATA)
+    total_likes = sum(1 for item in FEEDBACK_DATA if item["liked"])
+    total_dislikes = sum(1 for item in FEEDBACK_DATA if not item["liked"])
+    avg_score = round(total_likes / len(FEEDBACK_DATA) * 100, 1)
+
+    grouped: dict[str, list] = {}
+    for item in FEEDBACK_DATA:
+        grouped.setdefault(item["category"], []).append(item)
+
+    category_groups = []
+    for category, items in grouped.items():
+        likes = sum(1 for i in items if i["liked"])
+        dislikes = len(items) - likes
+        score = round(likes / len(items) * 100)
+
+        by_date: dict[str, dict] = defaultdict(lambda: {"likes": 0, "dislikes": 0})
+        for i in items:
+            date_key = i["created_at"].split(" ")[0][5:]
+            if i["liked"]:
+                by_date[date_key]["likes"] += 1
+            else:
+                by_date[date_key]["dislikes"] += 1
+
+        sorted_dates = sorted(by_date.keys())
+        day_totals = {d: by_date[d]["likes"] + by_date[d]["dislikes"] for d in sorted_dates}
+        max_day_total = max(day_totals.values(), default=1) or 1
+
+        daily_trend = []
+        for date in sorted_dates:
+            likes_n = by_date[date]["likes"]
+            dislikes_n = by_date[date]["dislikes"]
+            daily_trend.append({
+                "date": date,
+                "likes": likes_n,
+                "dislikes": dislikes_n,
+                "like_height": round(likes_n / max_day_total * 100),
+                "dislike_height": round(dislikes_n / max_day_total * 100),
+            })
+
+        category_groups.append({
+            "category": category,
+            "likes": likes,
+            "dislikes": dislikes,
+            "low_count": dislikes,
+            "avg_score": score,
+            "needs_attention": score < 60,
+            "daily_trend": daily_trend,
+        })
+
+    category_groups.sort(key=lambda g: g["avg_score"])
+    for rank, group in enumerate(category_groups, start=1):
+        group["rank"] = rank
+
     return {
-        "feedbacks": FEEDBACK_DATA,
-        "low_count": sum(1 for item in FEEDBACK_DATA if item["score"] < 60),
+        "category_groups": category_groups,
+        "score_ranking": category_groups, 
+        "low_category_count": sum(1 for g in category_groups if g["needs_attention"]),
         "total_likes": f"{total_likes:,}",
         "total_dislikes": f"{total_dislikes:,}",
         "avg_score": f"{avg_score:.1f}%",
@@ -118,17 +174,35 @@ _PROMPT_TEMPLATES = {
         "name": "answer_prompt",
         "description": "AI 상담 답변 생성 프롬프트",
         "version": 3,
-        "content": "당신은 노동법 전문 AI입니다...\n질문: {question}\n컨텍스트: {context}",
+        "content": "당신은 노동법 전문 AI입니다. 아래 컨텍스트를 반드시 참고하여 정확하게 답변하세요.\n질문: {question}\n컨텍스트: {context}",
         "placeholders": ["{question}", "{context}"],
         "updated_at": "2026-06-28 14:20",
         "updated_by": "관리자",
         "history": [
-            {"version": 3, "updated_at": "2026-06-28 14:20", "updated_by": "관리자", "summary": "컨텍스트 강조 문구 추가", "content": "..."},
-            {"version": 2, "updated_at": "2026-06-20 09:10", "updated_by": "관리자", "summary": "초기 버전 개선", "content": "..."},
+            {
+                "version": 3,
+                "updated_at": "2026-06-28 14:20",
+                "updated_by": "관리자",
+                "summary": "컨텍스트 강조 문구 추가",
+                "content": "당신은 노동법 전문 AI입니다. 아래 컨텍스트를 반드시 참고하여 정확하게 답변하세요.\n질문: {question}\n컨텍스트: {context}",
+            },
+            {
+                "version": 2,
+                "updated_at": "2026-06-20 09:10",
+                "updated_by": "관리자",
+                "summary": "초기 버전 개선",
+                "content": "당신은 노동법 전문 AI입니다.\n질문: {question}\n컨텍스트: {context}",
+            },
+            {
+                "version": 1,
+                "updated_at": "2026-06-10 11:00",
+                "updated_by": "관리자",
+                "summary": "최초 등록",
+                "content": "노동법 관련 질문에 답변하세요.\n질문: {question}",
+            },
         ],
     },
 }
-
 
 def prompts_context() -> dict:
     return {"prompt_templates": list(_PROMPT_TEMPLATES.values())}
@@ -159,15 +233,21 @@ def save_prompt_template(template_id: str, content: str) -> None:
     template["version"] = new_version
     template["updated_at"] = "2026-07-02 17:30"
 
-
-def test_prompt_template(template_id: str, content: str, query: str) -> str:
-    return f'"{query}"에 대한 테스트 응답입니다.\n\n수정된 프롬프트 기반 예시 답변이며, 실제 운영 환경에서는 LangGraph 파이프라인을 통해 처리됩니다.'
-
-
 def rollback_prompt_template(template_id: str, version) -> None:
     template = _PROMPT_TEMPLATES.get(template_id)
     if not template:
         return
     match = next((v for v in template["history"] if str(v["version"]) == str(version)), None)
-    if match:
-        template["content"] = match["content"]
+    if not match:
+        return
+    new_version = template["version"] + 1
+    template["history"].insert(0, {
+        "version": new_version,
+        "updated_at": "2026-07-03 15:00",  # 실제로는 timezone.now() 등으로 대체
+        "updated_by": "관리자",
+        "summary": f"v{version}으로 롤백",
+        "content": match["content"],
+    })
+    template["content"] = match["content"]
+    template["version"] = new_version
+    template["updated_at"] = "2026-07-03 15:00"

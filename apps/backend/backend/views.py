@@ -208,10 +208,6 @@ def prompt_api(request):
         dashboard.save_prompt_template(template_id, payload.get("content", ""))
         return JsonResponse({"ok": True})
 
-    if action == "test":
-        preview = dashboard.test_prompt_template(template_id, payload.get("content", ""), payload.get("query", ""))
-        return JsonResponse({"preview": preview})
-
     if action == "rollback":
         dashboard.rollback_prompt_template(template_id, payload.get("version"))
         return JsonResponse({"ok": True})

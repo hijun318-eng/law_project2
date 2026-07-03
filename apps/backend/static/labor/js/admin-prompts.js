@@ -42,7 +42,7 @@ export function initAdminPrompts() {
     const renderHistory = (history) => {
         historyBox.innerHTML = history.map((v, i) => `
             <article class="list-card">
-                <span>v${v.version}${i === 0 ? " · 현재" : ""}</span>
+                <span class="version-badge ${i === 0 ? "current" : ""}">v${v.version}${i === 0 ? " · 현재" : ""}</span>
                 <strong>${escapeHtml(v.summary)}</strong>
                 <time>${escapeHtml(v.updated_at)} · ${escapeHtml(v.updated_by)}</time>
                 ${i !== 0 ? `<button type="button" class="mini-button" data-rollback="${v.version}">롤백</button>` : ""}
@@ -60,21 +60,6 @@ export function initAdminPrompts() {
         btn.classList.add("active");
         document.querySelectorAll("[data-prompt-view]").forEach((panel) =>
             panel.hidden = panel.dataset.promptView !== btn.dataset.promptPanel);
-    });
-
-    document.querySelector("[data-toggle-test]")?.addEventListener("click", (event) => {
-        const body = document.querySelector("[data-test-body]");
-        body.hidden = !body.hidden;
-    });
-
-    document.querySelector("#promptTestBtn")?.addEventListener("click", () => {
-        const input = document.querySelector("#promptTestInput");
-        const resultBox = document.querySelector("#promptTestResult");
-        if (!input.value.trim()) return;
-        resultBox.hidden = false;
-        resultBox.textContent = "생성 중...";
-        postJson(section.dataset.promptApi, { action: "test", id: selectedId, query: input.value, content: textarea.value })
-            .then((data) => resultBox.textContent = data.preview);
     });
 
     saveBtn?.addEventListener("click", () => {

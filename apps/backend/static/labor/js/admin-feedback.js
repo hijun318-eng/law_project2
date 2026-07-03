@@ -4,8 +4,16 @@ export function initAdminFeedback() {
         if (!button) return;
         document.querySelectorAll("[data-feedback-filter]").forEach((node) => node.classList.remove("active"));
         button.classList.add("active");
-        document.querySelectorAll("[data-feedback-card]").forEach((card) => {
-            card.hidden = button.dataset.feedbackFilter === "low" && card.dataset.low !== "true";
+        document.querySelectorAll("[data-feedback-group]").forEach((group) => {
+            group.hidden = button.dataset.feedbackFilter === "low" && group.dataset.low !== "true";
         });
     });
+
+    document.querySelectorAll("[data-toggle-group]").forEach((head) => head.addEventListener("click", () => {
+        const group = head.closest("[data-feedback-group]");
+        const body = group.querySelector("[data-group-body]");
+        const chevron = head.querySelector("[data-chevron]");
+        body.hidden = !body.hidden;
+        chevron.classList.toggle("open", !body.hidden);
+    }));
 }

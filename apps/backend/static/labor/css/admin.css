@@ -72,6 +72,66 @@
 .trend-down { color: var(--primary); font-weight: 800; }
 .trend-flat { color: var(--muted); font-weight: 800; }
 
+/* 피드백 관리 */
+
+.feedback-group { border: 1px solid #edf0f4; border-radius: 8px; background: #fff; margin-bottom: 12px; overflow: hidden; }
+.feedback-group.low { border-color: #fecdd3; }
+.feedback-group-head {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 18px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+}
+.feedback-group-title { font-weight: 800; font-size: 15px; }
+.tag-warn { margin-left: 8px; padding: 3px 8px; border-radius: 6px; background: #fff1f2; color: var(--red); font-size: 12px; }
+.feedback-group-stats { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 13px; }
+.chevron { width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s ease; }
+.chevron.open { transform: rotate(-135deg); }
+.feedback-group-body { padding: 0 18px 18px; display: grid; gap: 14px; }
+
+.feedback-ranking { margin-bottom: 16px; }
+
+.score-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.score-card { padding: 16px; border: 1px solid #edf0f4; border-radius: 10px; background: #fff; }
+.score-card.low { border-color: #fecdd3; background: #fffbfb; }
+.score-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.score-card-rank { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #f1f5f9; color: var(--muted); font-weight: 800; font-size: 11px; flex-shrink: 0; }
+.score-card.low .score-card-rank { background: #fff1f2; color: var(--red); }
+.score-card-name { font-weight: 800; font-size: 13px; color: #374151; }
+.score-card-percent { font-size: 26px; font-weight: 800; margin-bottom: 8px; color: var(--primary); }
+.score-card-percent.low { color: var(--red); }
+.score-card-bar-track { height: 6px; border-radius: 999px; background: #f1f5f9; overflow: hidden; margin-bottom: 12px; }
+.score-card-bar { display: block; height: 100%; border-radius: 999px; background: var(--primary); }
+.score-card-bar.low { background: var(--red); }
+.score-card-counts { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.count-good { color: var(--primary); font-weight: 700; }
+.count-bad { color: var(--red); font-weight: 700; }
+.bar-chart.compact { height: 140px; gap: 12px; }
+
+.bar-chart .bar-column {
+    flex: 0 0 auto;
+    min-width: 40px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+.bar-pair { flex: 1; min-height: 0; display: flex; align-items: end; justify-content: center; gap: 4px; }
+.bar-with-count { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.bar-count { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.bar { width: 12px; border-radius: 6px 6px 0 0; min-height: 5px; }
+.bar.good { background: var(--primary); }
+.bar.bad { background: var(--red); }
+.bar-chart .bar-column small { color: var(--muted); font-size: 11px; }
+
+.legend-dot.good { background: var(--primary); }
+.legend-dot.bad { background: var(--red); }
 
 /* ────- Prompt Management ───── */
 .prompt-layout {
@@ -159,18 +219,18 @@
     border: 0;
     padding: 4px;
     border-radius: 8px;
-    flex: 0 0 auto;         /* 추가: 절대 줄어들지 않게 */
-    display: inline-flex;    /* 추가: shrink-to-fit이 content 기준으로 계산되게 */
+    flex: 0 0 auto;        
+    display: inline-flex;  
     gap: 2px;
 }
 .prompt-editor-head .segmented button {
-    flex: 0 0 auto;          /* 핵심 수정: flex:1 상속 무효화 */
+    flex: 0 0 auto;        
     padding: 5px 12px;
     font-size: 12px;
     border-radius: 6px;
     color: #6b7280;
     background: transparent;
-    white-space: nowrap;      /* 핵심 수정: 줄바꿈 금지 */
+    white-space: nowrap;    
 }
 .prompt-editor-head .segmented button.active { background: #fff; color: #111827; box-shadow: 0 1px 2px rgba(15,23,42,.08); }
 
@@ -179,7 +239,7 @@
 .prompt-placeholders {
     display: flex;
     align-items: center;
-    justify-content: flex-start;   /* 명시적으로 고정 */
+    justify-content: flex-start;  
     flex-wrap: wrap;
     gap: 6px;
     padding: 10px 20px;
@@ -197,7 +257,7 @@
 }
 .placeholder-tag {
     display: inline-flex;
-    flex: 0 0 auto;         /* 핵심 수정: 절대 늘어나지/줄어들지 않음 */
+    flex: 0 0 auto;        
     align-items: center;
     gap: 4px;
     padding: 3px 8px;
@@ -208,7 +268,7 @@
     border: 1px solid #e5e7eb;
     background: #f9fafb;
     color: #6b7280;
-    white-space: nowrap;      /* 핵심 수정: 태그 내부 줄바꿈 금지 */
+    white-space: nowrap;    
 }
 .placeholder-tag.ok { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
 .placeholder-tag.ok::before { content: "✓"; }
@@ -241,24 +301,6 @@
 }
 .notice-box.red p { margin: 2px 0; }
 
-.prompt-test { border-top: 1px solid #f1f5f9; flex-shrink: 0; }
-.prompt-test > button[data-toggle-test] {
-    width: 100%;
-    text-align: left;
-    padding: 12px 20px;
-    background: transparent;
-    border: 0;
-    color: #4b5563;
-    font-size: 13px;
-    font-weight: 600;
-}
-.prompt-test > button[data-toggle-test]:hover { background: #f9fafb; }
-.prompt-test-body { padding: 0 20px 16px; }
-.prompt-test-body .composer { padding: 0; gap: 8px; }
-.prompt-test-body input { border: 1px solid #e5e7eb; border-radius: 10px; padding: 9px 12px; font-size: 13px; }
-.prompt-test-body button#promptTestBtn { border-radius: 8px; padding: 9px 16px; font-size: 13px; }
-.prompt-test-body .result-box { margin-top: 10px; padding: 12px 14px; font-size: 12px; line-height: 1.7; white-space: pre-line; }
-
 .prompt-save-bar {
     display: flex;
     align-items: center;
@@ -272,7 +314,7 @@
 #promptSaveStatus.success { color: #059669; font-weight: 700; }
 #promptSaveBtn { padding: 9px 20px; border-radius: 10px; font-size: 13px; font-weight: 700; }
 
-/* History list inside editor */
+
 [data-prompt-view="history"] { padding: 16px 20px; overflow-y: auto; gap: 10px; }
 [data-prompt-view="history"] .list-card {
     border-radius: 12px;
@@ -284,8 +326,22 @@
 [data-prompt-view="history"] .list-card strong { font-size: 12px; font-weight: 600; color: #374151; }
 [data-prompt-view="history"] .list-card time { font-family: "JetBrains Mono", monospace; }
 [data-prompt-view="history"] .list-card [data-rollback] { justify-self: start; margin-top: 4px; }
+[data-prompt-view="history"] .list-card span {
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 800;
+    font-size: 13px;
+    color: #111827;
+    justify-self: start;
+    width: fit-content;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--cream);
+}
+[data-prompt-view="history"] .list-card:first-child span {
+    background: var(--primary-soft);
+    color: var(--primary);
+}
 
-/* Confirm modal (centered, not side drawer) */
 .prompt-confirm-overlay {
     position: fixed;
     inset: 0;
@@ -316,3 +372,26 @@
 
 
 .empty-state { text-align: center; padding: 32px 0; color: var(--muted); font-size: 14px; }
+
+.stat-card .card-meta { display: block; margin-bottom: 6px; color: #3c3c3d; font-size: 12px; font-weight: 700; }
+
+.stat-card .split-row {
+    width: fit-content;
+    min-width: 110px;   /* 원하는 만큼 조절 */
+    gap: 20px;
+}
+
+.perf-section-title { margin: 32px 0 16px; font-size: 20px; font-weight: 800; color: var(--ink); }
+.perf-section-title:first-of-type { margin-top: 0; }
+.bottleneck-panel .panel-sub { margin: -8px 0 14px; color: var(--muted); font-size: 12px; }
+.bottleneck-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 70px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+.bottleneck-row span { word-break: break-word; color: #374151; }
+.bottleneck-row i { display: block; height: 8px; border-radius: 999px; background: var(--primary); }
+.bottleneck-row b { text-align: right; color: var(--muted); font-weight: 700; }

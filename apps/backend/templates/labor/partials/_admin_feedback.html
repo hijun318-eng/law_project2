@@ -1,6 +1,78 @@
 <section class="admin-page">
     <div class="page-head"><div><h1>피드백 관리</h1><p>답변 품질을 모니터링하고 개선하세요</p></div></div>
-    <div class="stat-grid three"><article class="stat-card green"><strong>{{ total_likes }}</strong><p>총 좋아요</p></article><article class="stat-card red"><strong>{{ total_dislikes }}</strong><p>총 싫어요</p></article><article class="stat-card blue"><strong>{{ avg_score }}</strong><p>평균 만족도</p></article></div>
-    <div class="tabs" data-feedback-tabs><button class="active" data-feedback-filter="all">전체 답변</button><button data-feedback-filter="low">낮은 평가 ({{ low_count }})</button></div>
-    <div class="feedback-list">{% for item in feedbacks %}<article class="feedback-card {% if item.score < 60 %}low{% endif %}" data-feedback-card data-low="{% if item.score < 60 %}true{% else %}false{% endif %}"><header><span>{{ item.category }}</span>{% if item.score < 60 %}<b>개선 필요</b>{% endif %}</header><h2>{{ item.question }}</h2><div class="feedback-meter"><span>좋아요 {{ item.likes }}</span><span>싫어요 {{ item.dislikes }}</span><meter value="{{ item.score }}" min="0" max="100"></meter><strong>{{ item.score }}%</strong></div><textarea placeholder="개선 방향, 수정 내용 등을 메모하세요...">{{ item.memo }}</textarea></article>{% endfor %}</div>
+    <div class="stat-grid three">
+        <article class="stat-card green"><strong>{{ total_likes }}</strong><p>총 좋아요</p></article>
+        <article class="stat-card red"><strong>{{ total_dislikes }}</strong><p>총 싫어요</p></article>
+        <article class="stat-card blue"><strong>{{ avg_score }}</strong><p>평균 만족도</p></article>
+    </div>
+
+    <article class="panel wide feedback-ranking">
+        <h2>카테고리별 만족도</h2>
+        <p class="panel-sub">만족도가 낮은 순서 · 개선 우선순위</p>
+        <div class="score-card-grid">
+            {% for group in score_ranking %}
+            <div class="score-card {% if group.needs_attention %}low{% endif %}">
+                <div class="score-card-head">
+                    <span class="score-card-rank">{{ group.rank }}</span>
+                    <span class="score-card-name">{{ group.category }}</span>
+                </div>
+                <div class="score-card-percent {% if group.needs_attention %}low{% endif %}">{{ group.avg_score }}%</div>
+                <div class="score-card-bar-track">
+                    <span class="score-card-bar {% if group.needs_attention %}low{% endif %}" style="width: {{ group.avg_score }}%;"></span>
+                </div>
+                <div class="score-card-counts">
+                    <span class="count-good">👍 {{ group.likes }}</span>
+                    <span class="count-bad">👎 {{ group.dislikes }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <div class="tabs" data-feedback-tabs>
+        <button class="active" data-feedback-filter="all">전체 카테고리</button>
+        <button data-feedback-filter="low">개선 필요 ({{ low_category_count }})</button>
+    </div>
+
+    <div class="feedback-list">
+        {% for group in category_groups %}
+        <article class="feedback-group {% if group.needs_attention %}low{% endif %}" data-feedback-group data-low="{% if group.needs_attention %}true{% else %}false{% endif %}">
+            <button class="feedback-group-head" type="button" data-toggle-group>
+                <div>
+                    <span class="feedback-group-title">{{ group.category }}</span>
+                    {% if group.needs_attention %}<b class="tag-warn">개선 필요</b>{% endif %}
+                </div>
+                <div class="feedback-group-stats">
+                    <span>낮은 평가 {{ group.low_count }}건</span>
+                    <span>평균 {{ group.avg_score }}%</span>
+                    <i class="chevron" data-chevron></i>
+                </div>
+            </button>
+
+            <div class="feedback-group-body" data-group-body hidden>
+                <div class="chart-legend">
+                    <span><i class="legend-dot good"></i>좋아요</span>
+                    <span><i class="legend-dot bad"></i>싫어요</span>
+                </div>
+                <div class="bar-chart compact">
+                    {% for point in group.daily_trend %}
+                    <div class="bar-column">
+                        <div class="bar-pair">
+                            <div class="bar-with-count">
+                                <span class="bar-count">{{ point.likes }}</span>
+                                <span class="bar good" style="height: {{ point.like_height }}%"></span>
+                            </div>
+                            <div class="bar-with-count">
+                                <span class="bar-count">{{ point.dislikes }}</span>
+                                <span class="bar bad" style="height: {{ point.dislike_height }}%"></span>
+                            </div>
+                        </div>
+                        <small>{{ point.date }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
 </section>

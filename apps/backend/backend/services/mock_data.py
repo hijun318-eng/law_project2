@@ -59,14 +59,32 @@ DAILY_DATA = [
 ]
 
 FEEDBACK_DATA = [
-    {"id": 1, "question": "퇴직금 계산 방법이 궁금합니다", "category": "퇴직금", "likes": 87, "dislikes": 3, "score": 96.7, "memo": ""},
-    {"id": 2, "question": "임금체불 신고 절차는?", "category": "임금체불", "likes": 65, "dislikes": 8, "score": 89.0, "memo": ""},
-    {"id": 3, "question": "부당해고 구제신청 방법", "category": "부당해고", "likes": 54, "dislikes": 6, "score": 90.0, "memo": ""},
-    {"id": 4, "question": "연차 계산 (1년 미만)", "category": "연차휴가", "likes": 42, "dislikes": 7, "score": 85.7, "memo": ""},
-    {"id": 5, "question": "최저임금 위반 시 처벌 규정", "category": "최저임금", "likes": 38, "dislikes": 9, "score": 80.9, "memo": ""},
-    {"id": 6, "question": "포괄임금제가 합법인가요?", "category": "포괄임금제", "likes": 11, "dislikes": 19, "score": 36.7, "memo": ""},
-    {"id": 7, "question": "수습 기간 중 해고 가능한가요?", "category": "부당해고", "likes": 14, "dislikes": 16, "score": 46.7, "memo": ""},
-    {"id": 8, "question": "프리랜서도 퇴직금 받을 수 있나요?", "category": "퇴직금", "likes": 8, "dislikes": 18, "score": 30.8, "memo": ""},
+    {"id": 1031, "category": "임금체불", "liked": False, "created_at": "2026-07-01 09:14"},
+    {"id": 1030, "category": "임금체불", "liked": False, "created_at": "2026-07-01 08:50"},
+    {"id": 1028, "category": "임금체불", "liked": True,  "created_at": "2026-06-30 16:02"},
+    {"id": 1025, "category": "임금체불", "liked": False, "created_at": "2026-06-30 12:10"},
+    {"id": 1022, "category": "임금체불", "liked": True,  "created_at": "2026-06-29 11:47"},
+    {"id": 31, "category": "임금체불", "liked": False, "created_at": "2026-06-30 09:14"},
+    {"id": 30, "category": "임금체불", "liked": False, "created_at": "2026-06-30 08:50"},
+    {"id": 28, "category": "임금체불", "liked": True,  "created_at": "2026-06-30 16:02"},
+    {"id": 25, "category": "임금체불", "liked": False, "created_at": "2026-06-30 12:10"},
+    {"id": 22, "category": "임금체불", "liked": True,  "created_at": "2026-06-29 11:47"},
+
+    {"id": 1019, "category": "부당해고", "liked": False, "created_at": "2026-06-29 08:30"},
+    {"id": 1017, "category": "부당해고", "liked": True,  "created_at": "2026-06-28 20:15"},
+    {"id": 1015, "category": "부당해고", "liked": True,  "created_at": "2026-06-28 14:55"},
+
+    {"id": 1011, "category": "연차휴가", "liked": True,  "created_at": "2026-06-27 10:20"},
+    {"id": 1010, "category": "연차휴가", "liked": True,  "created_at": "2026-06-27 09:40"},
+    {"id": 1008, "category": "연차휴가", "liked": True,  "created_at": "2026-06-26 09:03"},
+
+    {"id": 1005, "category": "산업재해", "liked": False, "created_at": "2026-06-25 17:41"},
+    {"id": 1003, "category": "산업재해", "liked": False, "created_at": "2026-06-25 10:05"},
+    {"id": 1002, "category": "산업재해", "liked": False, "created_at": "2026-06-24 13:12"},
+
+    {"id": 998, "category": "근로계약", "liked": True,  "created_at": "2026-06-23 15:38"},
+    {"id": 996, "category": "근로계약", "liked": True,  "created_at": "2026-06-22 18:20"},
+    {"id": 995, "category": "근로계약", "liked": True,  "created_at": "2026-06-22 09:50"},
 ]
 
 NEWS_DATA = [

@@ -19,8 +19,11 @@
     --amber: #a6741d;
     --amber-soft: #f5ebd6;
 
-    --red: #9c2b20;
+    --red: #c5554b;
     --red-soft: #f6e4e1;
+    --orange: #e78535;
+
+    --green: #3e8e69;
 
     --noir: #15130f;
     --noir-line: rgba(255,255,255,.1);
@@ -258,7 +261,7 @@ input:focus, textarea:focus, select:focus { border-color: #d9a638; box-shadow: 0
     background: #fff;
 }
 
-.quick-grid button { padding: 18px; text-align: left; color: #374151; font-weight: 700; }
+.quick-grid button { padding: 18px; text-align: left; color: #374151; font-weight: 700; border: 1px solid var(--cream-line); background: #f6f4f078}
 .quick-grid button:hover { border-color: var(--gold-soft); background: var(--primary-soft); }
 
 .chat-window { min-height: 360px; max-height: 520px; overflow: auto; display: grid; align-content: start; gap: 12px; margin-bottom: 14px; }
@@ -363,15 +366,14 @@ input:focus, textarea:focus, select:focus { border-color: #d9a638; box-shadow: 0
 .panel.wide { grid-column: span 1; }
 .panel h2 { margin: 0 0 16px; font-size: 17px; }
 .bar-chart { height: 220px; display: flex; gap: 18px; align-items: end; padding-top: 16px; border-bottom: 1px solid var(--line); }
-.bar-chart div { flex: 1; height: 100%; display: flex; align-items: end; justify-content: center; gap: 4px; position: relative; }
+.bar-chart > div { flex: 1; height: 100%; display: flex; align-items: end; justify-content: center; gap: 4px; position: relative; }
 .bar { width: 12px; border-radius: 6px 6px 0 0; min-height: 5px; }
 .bar.q { background: var(--primary); } .bar.u { background: var(--green); opacity: .72; }
 .bar-chart small { position: absolute; bottom: -22px; color: var(--muted); font-size: 11px; }
 .metric-row, .split-row { display: grid; grid-template-columns: 1fr 120px auto; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 13px; }
 .split-row { grid-template-columns: 1fr auto; }
 .bad { color: var(--red); }
-.faq-row { display: grid; grid-template-columns: 84px 1fr 40px; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 13px; }
-.faq-row i { height: 8px; border-radius: 999px; background: var(--primary); }
+
 .table-tools { display: flex; gap: 12px; margin-bottom: 16px; }
 .table-card { overflow: auto; }
 table { width: 100%; border-collapse: collapse; min-width: 760px; }
