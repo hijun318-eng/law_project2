@@ -2,7 +2,6 @@
     <h1>마이페이지</h1>
     <div class="tabs" data-tabs>
         <button class="active" type="button" data-tab="history">상담 이력</button>
-        <button type="button" data-tab="bookmarks">즐겨찾기</button>
         <button type="button" data-tab="profile">계정 정보</button>
     </div>
     <div data-tab-panel="history" class="stack-list">
@@ -10,7 +9,6 @@
             <article class="list-card"><span>{{ item.category }}</span><strong>{{ item.q }}</strong><time>{{ item.date }}</time></article>
         {% endfor %}
     </div>
-    <div data-tab-panel="bookmarks" class="empty-state" hidden>저장된 답변이 없습니다</div>
     <div data-tab-panel="profile" class="profile-card" hidden>
         <dl><dt>이름</dt><dd>{{ user.name }}</dd><dt>이메일</dt><dd>{{ user.email }}</dd><dt>가입일</dt><dd>2024-01-15</dd><dt>총 상담 횟수</dt><dd>12회</dd></dl>
     </div>
