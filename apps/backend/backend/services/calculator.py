@@ -3,7 +3,9 @@ from __future__ import annotations
 import re
 from dataclasses import asdict, dataclass
 
-MINIMUM_WAGE_2026 = 10320
+from engine.calculator import core as calc_core
+
+MINIMUM_WAGE_2026 = calc_core.MINIMUM_WAGE_2026
 MONTHLY_WEEKS = 4.345
 
 
@@ -26,19 +28,33 @@ def format_won(value: float) -> str:
     return f"{round(value):,}원"
 
 
-def calc_retirement(years: int, months: int, last_3_months_salary: float, paid_days: float = 92) -> CalcResult:
-    total_days = round((years * 365) + (months * 30.5))
-    avg_wage = last_3_months_salary / paid_days if paid_days > 0 else 0
-    if total_days < 365:
+def calc_retirement(
+    years: int, months: int, last_3_months_salary: float, paid_days: float = 92
+) -> CalcResult:
+    engine = calc_core.calc_retirement_pay(
+        years, months, int(last_3_months_salary), int(paid_days),
+    )
+    total_days = engine["total_days"]
+    if not engine["success"]:
+        if engine.get("error") == "1년 미만":
+            return CalcResult(
+                title="퇴직금 계산",
+                label="예상 퇴직금",
+                amount=0,
+                tone="amber",
+                lines=[f"근속일수: 약 {total_days:,}일",
+                       "퇴직금은 계속근로기간 1년 이상인 경우 발생합니다."],
+                note="4주 평균 주 소정근로시간이 15시간 미만인 경우에도 제외될 수 있습니다.",
+            )
         return CalcResult(
             title="퇴직금 계산",
             label="예상 퇴직금",
             amount=0,
             tone="amber",
-            lines=[f"근속일수: 약 {total_days:,}일", "퇴직금은 계속근로기간 1년 이상인 경우 발생합니다."],
-            note="4주 평균 주 소정근로시간이 15시간 미만인 경우에도 제외될 수 있습니다.",
+            lines=[f"근속일수: 약 {total_days:,}일"],
         )
-    severance = avg_wage * 30 * (total_days / 365)
+    avg_wage = engine["avg_wage"]
+    severance = engine["severance"]
     return CalcResult(
         title="퇴직금 계산",
         label="예상 퇴직금",
@@ -52,16 +68,27 @@ def calc_retirement(years: int, months: int, last_3_months_salary: float, paid_d
     )
 
 
-def calc_annual(years_worked: int, daily_wage: float, used_days: float = 0, remaining_days: float | None = None) -> CalcResult:
-    total_days = years_worked * 11 if years_worked < 1 else min(15 + (years_worked - 1), 25)
-    remaining = remaining_days if remaining_days is not None else max(0, total_days - used_days)
+def calc_annual(
+    years_worked: int, daily_wage: float, used_days: float = 0,
+    remaining_days: float | None = None,
+) -> CalcResult:
+    engine = calc_core.calc_annual_leave_pay(
+        years_worked, int(daily_wage), int(used_days),
+    )
+    total_days = engine["total_days"]
+    remaining = (
+        int(remaining_days)
+        if remaining_days is not None
+        else engine["remaining"]
+    )
+    amount = int(daily_wage) * remaining
     return CalcResult(
         title="연차수당 계산",
         label="예상 연차수당",
-        amount=daily_wage * remaining,
+        amount=amount,
         tone="blue",
         lines=[
-            "1년 미만 근로자: 월 1일 발생 기준" if years_worked < 1 else f"{years_worked}년차: 연 {total_days}일 발생 기준",
+            engine["day_note"],
             f"1일 통상임금: {format_won(daily_wage)}",
             f"미사용 연차: {remaining:g}일",
             f"산식: {format_won(daily_wage)} × {remaining:g}일",
@@ -70,54 +97,66 @@ def calc_annual(years_worked: int, daily_wage: float, used_days: float = 0, rema
 
 
 def calc_weekly(hourly_wage: float, weekly_hours: float) -> CalcResult:
-    if weekly_hours < 15:
+    engine = calc_core.calc_weekly_allowance(
+        int(hourly_wage), int(weekly_hours),
+    )
+    if not engine["success"]:
         return CalcResult(
             title="주휴수당 계산",
             label="예상 주휴수당",
             amount=0,
             tone="amber",
-            lines=[f"시급: {format_won(hourly_wage)}", f"1주 소정근로시간: {weekly_hours:g}시간", "주 15시간 미만 근로자는 주휴수당 지급 대상이 아닙니다."],
+            lines=[f"시급: {format_won(hourly_wage)}",
+                   f"1주 소정근로시간: {int(weekly_hours):g}시간",
+                   "주 15시간 미만 근로자는 주휴수당 지급 대상이 아닙니다."],
         )
-    weekly_allowance = (weekly_hours / 40) * 8 * hourly_wage
-    monthly_allowance = weekly_allowance * MONTHLY_WEEKS
+    weekly = engine["weekly_allowance"]
+    monthly = engine["monthly_allowance"]
     return CalcResult(
         title="주휴수당 계산",
         label="주 예상 주휴수당",
-        amount=weekly_allowance,
+        amount=weekly,
         tone="blue",
         lines=[
             f"시급: {format_won(hourly_wage)}",
             f"1주 소정근로시간: {weekly_hours:g}시간",
-            f"월 환산: 약 {format_won(monthly_allowance)}",
+            f"월 환산: 약 {format_won(monthly)}",
             f"산식: ({weekly_hours:g}시간 ÷ 40시간) × 8시간 × {format_won(hourly_wage)}",
         ],
         note="주휴수당은 소정근로일을 개근한 경우 지급됩니다.",
     )
 
 
-def calc_minimum(hourly_wage: float, daily_hours: float, weekly_days: float, min_wage: float = MINIMUM_WAGE_2026) -> CalcResult:
-    weekly_hours = daily_hours * weekly_days
-    effective_hours = weekly_hours + ((weekly_hours / 40) * 8) if weekly_hours >= 15 else weekly_hours
-    effective_hourly = (hourly_wage * weekly_hours) / effective_hours if effective_hours else 0
-    ratio = (effective_hourly / min_wage) * 100 if min_wage else 0
-    passed = effective_hourly >= min_wage
-    monthly_shortage = 0 if passed else (min_wage - effective_hourly) * weekly_hours * MONTHLY_WEEKS
+def calc_minimum(
+    hourly_wage: float, daily_hours: float, weekly_days: float,
+    min_wage: float = MINIMUM_WAGE_2026,
+) -> CalcResult:
+    engine = calc_core.calc_minimum_wage_check(
+        int(hourly_wage), int(daily_hours), int(weekly_days),
+        int(min_wage),
+    )
+    passed = engine["success"]
+    effective = engine["effective_hourly"]
+    ratio = engine["ratio"]
+    monthly_shortage = engine["monthly_shortage"]
     return CalcResult(
         title="최저임금 확인",
         label="최저임금 위반 아님" if passed else "최저임금 위반 의심",
-        amount=effective_hourly if passed else monthly_shortage,
+        amount=effective if passed else monthly_shortage,
         tone="green" if passed else "red",
         lines=[
-            f"실질 시급: {format_won(effective_hourly)}",
+            f"실질 시급: {format_won(effective)}",
             f"기준 최저시급: {format_won(min_wage)} (2026년 기준)",
-            f"근무시간: 하루 {daily_hours:g}시간 × 주 {weekly_days:g}일 = 주 {weekly_hours:g}시간",
+            f"근무시간: 하루 {int(daily_hours):g}시간 × 주 {int(weekly_days):g}일 = 주 {engine['weekly_hours']:g}시간",
             f"최저임금 대비: {ratio:.1f}%",
         ],
         note="" if passed else "임금명세서와 실제 근로시간을 함께 확인한 뒤 고용노동부 상담센터 1350에 문의해보세요.",
     )
 
 
-def calculate_form(calc_type: str, salary: float = 0, months: float = 0, hours: float = 40) -> CalcResult:
+def calculate_form(
+    calc_type: str, salary: float = 0, months: float = 0, hours: float = 40,
+) -> CalcResult:
     if calc_type == "annual":
         return calc_annual(int(months // 12), salary / 30 if salary else 0)
     if calc_type == "weekly":
@@ -138,7 +177,8 @@ def calculate_natural(text: str) -> tuple[str, CalcResult | None]:
 
     if calc_type == "severance":
         period = _service_period(text)
-        monthly_salary = _first_money_near(tokens, text, r"월|월급|급여|임금") or (tokens[0]["value"] if tokens else 0)
+        monthly_salary = _first_money_near(tokens, text, r"월|월급|급여|임금") \
+                         or (tokens[0]["value"] if tokens else 0)
         if not period or not monthly_salary:
             return "퇴직금 계산에는 근무기간과 임금 정보가 필요합니다. 예: 퇴직금 계산해줘, 3년 근무, 월 300만원", None
         result = calc_retirement(period["years"], period["months"], monthly_salary * 3)
@@ -221,4 +261,3 @@ def _first_money_near(tokens: list[dict], text: str, pattern: str) -> float | No
         if re.search(pattern, text[start:end]):
             return token["value"]
     return None
-

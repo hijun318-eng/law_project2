@@ -1,4 +1,61 @@
-from .mock_data import CATEGORY_PIE, CATEGORY_TRENDS, DAILY_DATA, FEEDBACK_DATA, MOCK_USERS
+MOCK_USERS = [
+    {"id": 1, "name": "김민준", "email": "minjun@example.com", "join_date": "2024-01-15", "last_login": "2026-06-30", "status": "active", "questions": 12},
+    {"id": 2, "name": "이서연", "email": "seoyeon@example.com", "join_date": "2024-02-20", "last_login": "2026-06-28", "status": "active", "questions": 8},
+    {"id": 3, "name": "박지호", "email": "jiho@example.com", "join_date": "2024-03-10", "last_login": "2026-05-15", "status": "suspended", "questions": 3},
+    {"id": 4, "name": "최유진", "email": "yujin@example.com", "join_date": "2024-04-05", "last_login": "2026-06-29", "status": "active", "questions": 24},
+    {"id": 5, "name": "정다은", "email": "daeun@example.com", "join_date": "2024-05-12", "last_login": "2026-06-27", "status": "active", "questions": 6},
+    {"id": 6, "name": "한승호", "email": "seungho@example.com", "join_date": "2024-06-01", "last_login": "2026-04-10", "status": "suspended", "questions": 1},
+    {"id": 7, "name": "오미래", "email": "mirae@example.com", "join_date": "2024-06-15", "last_login": "2026-06-30", "status": "active", "questions": 15},
+    {"id": 8, "name": "임태양", "email": "taeyang@example.com", "join_date": "2024-07-20", "last_login": "2026-06-25", "status": "active", "questions": 9},
+]
+
+FAQ_DATA = [
+    {"name": "임금체불", "count": 342},
+    {"name": "부당해고", "count": 287},
+    {"name": "퇴직금", "count": 198},
+    {"name": "연차휴가", "count": 156},
+    {"name": "최저임금", "count": 134},
+    {"name": "직장내괴롭힘", "count": 98},
+    {"name": "산업재해", "count": 76},
+]
+
+CATEGORY_PIE = [
+    {"name": "임금체불", "value": 28},
+    {"name": "부당해고", "value": 23},
+    {"name": "퇴직금", "value": 16},
+    {"name": "연차휴가", "value": 13},
+    {"name": "최저임금", "value": 11},
+    {"name": "기타", "value": 9},
+]
+
+CATEGORY_TRENDS = [
+    {"name": "임금체불", "change": 8},
+    {"name": "부당해고", "change": -3},
+    {"name": "연차휴가", "change": 0},
+    {"name": "산업재해", "change": 5},
+    {"name": "근로계약", "change": -2},
+]
+
+DAILY_DATA = [
+    {"date": "6/25", "questions": 47, "users": 12},
+    {"date": "6/26", "questions": 52, "users": 15},
+    {"date": "6/27", "questions": 61, "users": 18},
+    {"date": "6/28", "questions": 58, "users": 14},
+    {"date": "6/29", "questions": 73, "users": 21},
+    {"date": "6/30", "questions": 84, "users": 27},
+    {"date": "7/1", "questions": 38, "users": 9},
+]
+
+FEEDBACK_DATA = [
+    {"id": 1, "question": "퇴직금 계산 방법이 궁금합니다", "category": "퇴직금", "likes": 87, "dislikes": 3, "score": 96.7, "memo": ""},
+    {"id": 2, "question": "임금체불 신고 절차는?", "category": "임금체불", "likes": 65, "dislikes": 8, "score": 89.0, "memo": ""},
+    {"id": 3, "question": "부당해고 구제신청 방법", "category": "부당해고", "likes": 54, "dislikes": 6, "score": 90.0, "memo": ""},
+    {"id": 4, "question": "연차 계산 (1년 미만)", "category": "연차휴가", "likes": 42, "dislikes": 7, "score": 85.7, "memo": ""},
+    {"id": 5, "question": "최저임금 위반 시 처벌 규정", "category": "최저임금", "likes": 38, "dislikes": 9, "score": 80.9, "memo": ""},
+    {"id": 6, "question": "포괄임금제가 합법인가요?", "category": "포괄임금제", "likes": 11, "dislikes": 19, "score": 36.7, "memo": ""},
+    {"id": 7, "question": "수습 기간 중 해고 가능한가요?", "category": "부당해고", "likes": 14, "dislikes": 16, "score": 46.7, "memo": ""},
+    {"id": 8, "question": "프리랜서도 퇴직금 받을 수 있나요?", "category": "퇴직금", "likes": 8, "dislikes": 18, "score": 30.8, "memo": ""},
+]
 
 
 def dashboard_context() -> dict:
