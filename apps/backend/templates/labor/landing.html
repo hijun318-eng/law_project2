@@ -1,6 +1,7 @@
 {% extends "labor/base.html" %}
 {% load static %}
 {% block body_class %}landing-body{% endblock %}
+
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'labor/css/landing2.css' %}">
 {% endblock %}
@@ -35,11 +36,12 @@
         <h1>내 권리, 지금 바로<br><span>AI에게 물어보세요</span></h1>
         <br><br>
         <form class="hero-search" action="{% if user %}{% url 'user_app' %}{% else %}{% url 'login' %}{% endif %}"
-      method="get">
+            method="get" data-hero-search novalidate>
             {% if user %}<input type="hidden" name="page" value="home">{% endif %}
-            <input name="question" placeholder="예: 3개월째 월급을 못 받았습니다. 어떻게 해야 하나요?">
+            <input name="question" placeholder="예: 3개월째 월급을 못 받았습니다. 어떻게 해야 하나요?" data-question-input>
             <button type="submit">질문하기</button>
         </form>
+        <small class="hero-search-error" data-question-error hidden>질문을 입력해주세요.</small>
         <small>법률 상담은 로그인 후 이용</small>
     </section>
 
@@ -160,7 +162,15 @@
             <h2>지금 이 상황, 법적으로 <em>어떻게</em><br><em>대응</em>해야 할까요?</h2>
             <p>판례·법령 근거와 함께 24시간 답변. 부담 없이 지금 물어보세요.</p>
         </div>
-        <a class="cta-button" href="{% url 'register' %}">AI 상담 시작하기 ↗</a>
+        {% if user %}
+            <a class="cta-button" href="{% url 'user_app' %}?page=home">
+                AI 상담 시작하기 ↗
+            </a>
+        {% else %}
+            <a class="cta-button" href="{% url 'register' %}">
+                AI 상담 시작하기 ↗
+            </a>
+        {% endif %}
     </div>
 </div>
 
@@ -191,4 +201,8 @@
     <div class="footer-wordmark">LABOR·LAW·AI</div>
 </footer>
 
+{% endblock %}
+
+{% block scripts %}
+    <script type="module" src="{% static 'labor/js/landing.js' %}"></script>
 {% endblock %}
