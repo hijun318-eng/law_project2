@@ -6,6 +6,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
 from .services import advice, calculator, dashboard, news
+from engine.router_engine import router_engine
 
 # DB 연결하고 삭제 필요
 _DEMO_USERS = {
@@ -204,7 +205,10 @@ def prompt_api(request):
 def advice_api(request):
     payload = _json_payload(request)
     question = payload.get("question", "")
-    return JsonResponse({"answer": advice.answer_question(question)})
+    if not question:
+        return JsonResponse({"error": "질문을 입력해주세요."}, status=400)
+    result = router_engine.run(question)
+    return JsonResponse({"answer": result.content})
 
 
 @require_POST
