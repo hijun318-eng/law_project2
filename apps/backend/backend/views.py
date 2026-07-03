@@ -45,7 +45,7 @@ def _ensure_default_users():
         first_name="김민준",
     )
 
-_ensure_default_users()
+# _ensure_default_users()
 
 def landing(request):
     user = _current_user(request)
