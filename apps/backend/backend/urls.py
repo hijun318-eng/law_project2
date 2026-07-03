@@ -13,6 +13,11 @@ urlpatterns = [
     path("app/", views.user_app, name="user_app"),
     path("admin-console/", views.admin_console, name="admin_console"),
 
+    path("api/admin/users/toggle-status/", views.admin_toggle_user_status, name="admin_toggle_user_status"),
+    path("api/admin/vectordb/rebuild/", views.admin_rebuild_vectordb, name="admin_rebuild_vectordb"),
+    path("api/admin/vectordb/reprocess/", views.admin_reprocess_failed, name="admin_reprocess_failed"),
+    path("api/admin/performance/", views.admin_performance_data, name="admin_performance_data"),
+
     path("api/advice/", views.advice_api, name="advice_api"),
     path("api/calculate/", views.calculate_api, name="calculate_api"),
     path("api/news/", views.news_api, name="news_api"),
