@@ -20,7 +20,7 @@
         </thead>
         <tbody>
             {% for row in users %}
-            <tr data-user-row data-status="{{ row.status }}">
+            <tr data-user-row data-user-id="{{ row.id }}" data-status="{{ row.status }}">
                 <td><strong>{{ row.name }}</strong><small>{{ row.email }}</small></td>
                 <td>{{ row.join_date }}</td>
                 <td>{{ row.last_login }}</td>

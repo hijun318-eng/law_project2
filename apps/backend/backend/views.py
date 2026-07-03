@@ -221,6 +221,53 @@ def admin_console(request):
     context.update(_TAB_CONTEXT_BUILDERS[tab]())
     return render(request, "labor/admin.html", context)
 
+
+@require_POST
+def admin_toggle_user_status(request):
+    payload = _json_payload(request)
+    user_id = payload.get("user_id")
+    new_status = payload.get("status")  # "active" 또는 "suspended"
+
+    from .services.dashboard import MOCK_USERS
+    for user in MOCK_USERS:
+        if user["id"] == user_id:
+            user["status"] = new_status
+            return JsonResponse({"ok": True, "user_id": user_id, "status": new_status})
+
+    return JsonResponse({"error": "User not found"}, status=404)
+
+
+@require_POST
+def admin_rebuild_vectordb(request):
+    payload = _json_payload(request)
+    db_id = payload.get("id", "")
+    return JsonResponse({"ok": True, "status": "completed", "db_id": db_id})
+
+
+@require_POST
+def admin_reprocess_failed(request):
+    payload = _json_payload(request)
+    failed_id = payload.get("id")
+    return JsonResponse({"ok": True, "failed_id": failed_id})
+
+
+def admin_performance_data(request):
+    from .services.dashboard import performance_context
+    data = performance_context()
+    period = request.GET.get("period", "day")
+    if period == "week":
+        data["llm_usage"] = [
+            {"date": "06-23", "calls": 980, "calls_height": 85, "emb_calls_height": 50},
+            {"date": "06-24", "calls": 1050, "calls_height": 90, "emb_calls_height": 55},
+        ]
+    elif period == "month":
+        data["llm_usage"] = [
+            {"date": "06-01", "calls": 4200, "calls_height": 95, "emb_calls_height": 60},
+            {"date": "06-15", "calls": 3800, "calls_height": 85, "emb_calls_height": 50},
+        ]
+    return JsonResponse(data)
+
+
 @require_POST
 def prompt_api(request):
     payload = _json_payload(request)

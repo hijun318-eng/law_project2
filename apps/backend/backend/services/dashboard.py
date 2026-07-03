@@ -45,7 +45,9 @@ DAILY_DATA = [
     {"date": "6/30", "questions": 84, "users": 27},
     {"date": "7/1", "questions": 38, "users": 9},
 ]
+
 from backend.services.mock_data import FEEDBACK_DATA
+
 
 def dashboard_context() -> dict:
     max_questions = max(item["questions"] for item in DAILY_DATA)
@@ -93,27 +95,27 @@ from collections import defaultdict
 
 
 def feedback_context() -> dict:
-    total_likes = sum(1 for item in FEEDBACK_DATA if item.get("liked", False))
-    total_dislikes = sum(1 for item in FEEDBACK_DATA if not item.get("liked", False))
-    avg_score = round(total_likes / len(FEEDBACK_DATA) * 100, 1) if FEEDBACK_DATA else 0.0
+    total_likes = sum(item["likes"] for item in FEEDBACK_DATA)
+    total_dislikes = sum(item["dislikes"] for item in FEEDBACK_DATA)
+    total_votes = total_likes + total_dislikes
+    avg_score = round(total_likes / total_votes * 100, 1) if total_votes > 0 else 0
 
     grouped: dict[str, list] = {}
     for item in FEEDBACK_DATA:
-        grouped.setdefault(item.get("category", "미분류"), []).append(item)
+        grouped.setdefault(item["category"], []).append(item)
 
     category_groups = []
     for category, items in grouped.items():
-        likes = sum(1 for i in items if i.get("liked", False))
-        dislikes = len(items) - likes
-        score = round(likes / len(items) * 100) if items else 0
+        likes = sum(i["likes"] for i in items)
+        dislikes = sum(i["dislikes"] for i in items)
+        total = likes + dislikes
+        score = round(likes / total * 100) if total > 0 else 0
 
         by_date: dict[str, dict] = defaultdict(lambda: {"likes": 0, "dislikes": 0})
         for i in items:
             date_key = i["created_at"].split(" ")[0][5:]
-            if i.get("liked", False):
-                by_date[date_key]["likes"] += 1
-            else:
-                by_date[date_key]["dislikes"] += 1
+            by_date[date_key]["likes"] += i["likes"]
+            by_date[date_key]["dislikes"] += i["dislikes"]
 
         sorted_dates = sorted(by_date.keys())
         day_totals = {d: by_date[d]["likes"] + by_date[d]["dislikes"] for d in sorted_dates}
@@ -147,31 +149,12 @@ def feedback_context() -> dict:
 
     return {
         "category_groups": category_groups,
-        "score_ranking": category_groups,
+        "score_ranking": category_groups, 
         "low_category_count": sum(1 for g in category_groups if g["needs_attention"]),
         "total_likes": f"{total_likes:,}",
         "total_dislikes": f"{total_dislikes:,}",
         "avg_score": f"{avg_score:.1f}%",
     }
-
-def prompts_context() -> dict:
-    templates = [
-        {
-            "id": "answer_prompt",
-            "name": "answer_prompt",
-            "description": "AI 상담 답변 생성 프롬프트",
-            "version": 3,
-            "content": "당신은 노동법 전문 AI입니다...\n질문: {question}\n컨텍스트: {context}",
-            "placeholders": ["{question}", "{context}"],
-            "updated_at": "2026-06-28 14:20",
-            "updated_by": "관리자",
-            "history": [
-                {"version": 3, "updated_at": "2026-06-28 14:20", "updated_by": "관리자", "summary": "컨텍스트 강조 문구 추가"},
-                {"version": 2, "updated_at": "2026-06-20 09:10", "updated_by": "관리자", "summary": "초기 버전 개선"},
-            ],
-        },
-    ]
-    return {"prompt_templates": templates}
 
 
 def vectordb_context() -> dict:
@@ -289,7 +272,7 @@ def rollback_prompt_template(template_id: str, version) -> None:
     new_version = template["version"] + 1
     template["history"].insert(0, {
         "version": new_version,
-        "updated_at": "2026-07-03 15:00",  # 실제로는 timezone.now() 등으로 대체
+        "updated_at": "2026-07-03 15:00",
         "updated_by": "관리자",
         "summary": f"v{version}으로 롤백",
         "content": match["content"],

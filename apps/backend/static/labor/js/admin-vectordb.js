@@ -23,7 +23,7 @@ export function initAdminVectorDB() {
             label.textContent = `${pct}%`;
             if (pct >= 100) {
                 clearInterval(timer);
-                postJson(card.dataset.dbId ? `/admin/vectordb/${card.dataset.dbId}/rebuild/` : "", { id: card.dataset.dbId })
+                postJson("/api/admin/vectordb/rebuild/", { id: card.dataset.dbId })
                     .catch(() => {})
                     .finally(() => {
                         statusLabel.textContent = "정상";
@@ -48,7 +48,7 @@ export function initAdminVectorDB() {
         const card = btn.closest("[data-failed-id]");
         btn.disabled = true;
         btn.textContent = "처리 중...";
-        postJson(`/admin/vectordb/failed/${card.dataset.failedId}/reprocess/`, {})
+        postJson("/api/admin/vectordb/reprocess/", { id: parseInt(card.dataset.failedId) })
             .catch(() => {})
             .finally(() => card.remove());
     }));
