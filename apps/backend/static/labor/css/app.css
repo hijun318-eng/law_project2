@@ -318,9 +318,9 @@ input:focus, textarea:focus, select:focus { border-color: #d9a638; box-shadow: 0
 .drawer-panel header button { border: 0; background: transparent; font-size: 24px; }
 .drawer-panel article { padding: 16px; border-radius: 8px; background: #f8fafc; margin-bottom: 12px; line-height: 1.7; }
 
-.segmented, .tabs, .chips { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; }
+.segmented, .tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; }
 .segmented { padding: 6px; border: 1px solid #edf0f4; border-radius: 8px; background: #fff; }
-.segmented button, .tabs button, .chips button {
+.segmented button, .tabs button  {
     border: 1px solid transparent;
     border-radius: 8px;
     padding: 9px 14px;
@@ -331,8 +331,8 @@ input:focus, textarea:focus, select:focus { border-color: #d9a638; box-shadow: 0
 }
 .segmented button { flex: 1; }
 .segmented button.active { background: var(--cream); color: var(--primary-dark); }
-.segmented.blue button.active, .tabs button.active, .chips button.active { background: var(--cream); color: var(--primary-dark); border-color: var(--cream); }
-.tabs button, .chips button { border-color: #dfe4ea; }
+.segmented.blue button.active, .tabs button.active  { background: var(--cream); color: var(--primary-dark); border-color: var(--cream); }
+.tabs button  { border-color: #dfe4ea; }
 .calc-panel { padding: 22px; }
 .result-box { margin-top: 16px; padding: 18px; border-radius: 8px; border: 1px solid; }
 .result-box.blue { background: var(--card); border-color: #d9c3a8; color: var(--primary-dark); }

@@ -23,11 +23,6 @@ _QUICK_QUESTIONS = [
     "주휴수당은 어떻게 계산하나요?",
 ]
 
-_NEWS_CATEGORIES = [
-    "전체", "최저임금", "직장내괴롭힘", "임금", "육아휴직",
-    "노조", "해고", "퇴직금", "산재",
-]
-
 def _ensure_default_users():
     """최초 실행 시 데모 계정이 없으면 DB에 생성 (비밀번호 해싱됨)"""
     if User.objects.filter(username="admin@example.com").exists():
@@ -175,7 +170,6 @@ def user_app(request):
                 "id": i,
                 "title": item.get("title", ""),
                 "date": _format_pubdate(item.get("pubDate", "")),
-                "category": "전체",
                 "summary": item.get("description", ""),
             })
     news_summary_text = (
@@ -192,7 +186,6 @@ def user_app(request):
             "initial_question": request.GET.get("question", "").strip(),
             "quick_questions": _QUICK_QUESTIONS,
             "minimum_wage": calculator.MINIMUM_WAGE_2026,
-            "news_categories": _NEWS_CATEGORIES,
             "news_items": news_items,
             "news_summary": news_summary_text,
             "history": [
@@ -388,7 +381,6 @@ def calculate_api(request):
 
 def news_api(request):
     query = request.GET.get("q", "")
-    category = request.GET.get("category", "전체")
 
     res = news_search_tool.run(query=query if query.strip() else "노동법", display=10)
 
@@ -399,7 +391,6 @@ def news_api(request):
                 "title": item.get("title", ""),
                 "summary": item.get("description", ""),
                 "date": _format_pubdate(item.get("pubDate", "")),
-                "category": category,
             })
         summary_text = f"'{query}' 관련 {len(items)}건의 뉴스를 찾았습니다." if query else f"최신 노동법 뉴스 {len(items)}건"
     else:
