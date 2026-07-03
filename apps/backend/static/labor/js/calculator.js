@@ -56,7 +56,8 @@ export function initCalculator() {
         if (!text) return;
         appendMessage(messages, "user", text);
         postJson(calcSection.dataset.calcApi, { mode: "chat", text }).then((data) => {
-            appendMessage(messages, "ai", escapeHtml(data.message) + (data.result ? renderResult(data.result) : ""), false, true);
+            const content = data.result ? renderResult(data.result) : escapeHtml(data.message);
+            appendMessage(messages, "ai", content, false, true);
             input.value = "";
         });
     });
