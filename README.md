@@ -14,6 +14,13 @@ law_project2/
 │   └── ranker/        (B) 문서 랭킹 마이크로서비스 (port 8001)
 │       ├── ranker/    Django 앱 (rerank API)
 │       └── manage.py
+├── data/               데이터 저장소 (git 제외)
+│   ├── raw/           원천 파일 (PDF, MD)
+│   ├── process/       가공된 JSON (case, law, qna)
+│   └── cache/         SAC 캐시 (판례 요약)
+├── scripts/
+│   └── preprocess/    전처리 파이프라인 스크립트
+├── vector_db/          ChromaDB 벡터 저장소 (git 제외)
 ├── .env               API 키, DB 설정
 └── README.md
 ```
@@ -44,9 +51,33 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 RANKER_URL=http://localhost:8001
 ```
 
-### 3. 벡터 DB 생성 (최초 1회)
+### 3. 데이터 전처리 (최초 1회)
 
-RAG 엔진이 사용할 법령/판례/질의회시 ChromaDB를 생성합니다.
+원천 파일(판례 MD, 법령 PDF 등)을 RAG 엔진이 사용할 JSON 및 캐시로 변환합니다.
+
+```bash
+# 프로젝트 루트에서 실행
+python scripts/preprocess/run_preprocess.py
+```
+
+**파이프라인 흐름:**
+```
+data/raw/                    ← 원천 파일 (PDF, MD)
+  ├── case/**/*.md
+  ├── law/*.pdf
+  └── pdf/*.pdf
+      ↓ preprocess_{case,law,qna}.py
+data/process/                ← 가공된 JSON
+  ├── case/*.json
+  ├── law/*.json
+  └── qna/qna.json
+      ↓ preprocess_sac.py (LLM 요약)
+data/cache/sac/*.json        ← 판례 SAC 캐시
+```
+
+### 4. 벡터 DB 생성 (최초 1회)
+
+전처리된 데이터로 ChromaDB를 생성합니다.
 
 ```bash
 cd apps/backend
@@ -54,6 +85,9 @@ python -m engine.init_db          # 전체 DB 생성
 python -m engine.init_db --force  # 기존 DB 삭제 후 재생성
 python -m engine.init_db --db law # 특정 DB만 생성 (law|precedent|qna)
 ```
+
+> **참고:** 판례(`precedent`) DB는 `data/cache/sac/`의 SAC 캐시를 사용하므로,
+> `run_preprocess.py` 실행 후 SAC 캐시가 생성된 상태여야 합니다.
 
 ---
 
