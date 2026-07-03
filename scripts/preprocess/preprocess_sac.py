@@ -10,7 +10,14 @@ data/cache/sac/*.json
 
 import argparse
 import json
+import sys
 from pathlib import Path
+
+# scripts/preprocess/에서 직접 실행할 때 apps/backend/를 Python path에 추가
+_THIS_DIR = Path(__file__).resolve().parent
+_BACKEND_DIR = _THIS_DIR.parent.parent / "apps" / "backend"
+if _BACKEND_DIR.exists() and str(_BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_DIR))
 
 from engine.services.precedent_summary_service import (
     summary_service
