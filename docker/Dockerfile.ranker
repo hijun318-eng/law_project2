@@ -12,7 +12,7 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 COPY apps/ranker/requirements.txt apps/ranker/requirements.txt
 RUN pip install --no-cache-dir -r apps/ranker/requirements.txt
 
-COPY . .
+COPY apps/ranker/ apps/ranker/
 
 WORKDIR /app/apps/ranker
 EXPOSE 8001
