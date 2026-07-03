@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from dataclasses import asdict, dataclass
 
 from engine.calculator import core as calc_core
@@ -170,94 +169,15 @@ def calculate_form(
 
 
 def calculate_natural(text: str) -> tuple[str, CalcResult | None]:
-    calc_type = _detect_type(text)
-    tokens = _money_tokens(text)
-    if not calc_type:
-        return "계산 유형을 찾지 못했습니다. 퇴직금, 연차수당, 주휴수당, 최저임금 중 하나를 포함해 입력해주세요.", None
-
-    if calc_type == "severance":
-        period = _service_period(text)
-        monthly_salary = _first_money_near(tokens, text, r"월|월급|급여|임금") \
-                         or (tokens[0]["value"] if tokens else 0)
-        if not period or not monthly_salary:
-            return "퇴직금 계산에는 근무기간과 임금 정보가 필요합니다. 예: 퇴직금 계산해줘, 3년 근무, 월 300만원", None
-        result = calc_retirement(period["years"], period["months"], monthly_salary * 3)
-        return f"{result.label}은 {format_won(result.amount)}입니다.", result
-
-    if calc_type == "annual":
-        period = _service_period(text)
-        years = int(period["total_months"] // 12) if period else _first_number(text, [r"(\d+(?:\.\d+)?)\s*년차"])
-        remaining = _first_number(text, [r"미사용\s*(\d+(?:\.\d+)?)\s*일", r"남은\s*연차\s*(\d+(?:\.\d+)?)\s*일"])
-        used = _first_number(text, [r"사용\s*(\d+(?:\.\d+)?)\s*일", r"(\d+(?:\.\d+)?)\s*일\s*사용"]) or 0
-        daily_wage = _first_money_near(tokens, text, r"일|하루|통상") or (tokens[0]["value"] if tokens else 0)
-        if years is None or not daily_wage:
-            return "연차수당 계산에는 근속연수와 1일 통상임금이 필요합니다. 예: 연차수당, 2년 근무, 1일 통상임금 8만원, 3일 사용", None
-        result = calc_annual(int(years), daily_wage, used, remaining)
-        return f"{result.label}은 {format_won(result.amount)}입니다.", result
-
-    if calc_type == "weekly":
-        hourly_wage = _first_money_near(tokens, text, r"시급|시간급") or (tokens[0]["value"] if tokens else 0)
-        weekly_hours = _first_number(text, [r"주\s*(?:소정)?(?:근로)?\s*(\d+(?:\.\d+)?)\s*시간", r"(\d+(?:\.\d+)?)\s*시간\s*/\s*주"])
-        if not hourly_wage or weekly_hours is None:
-            return "주휴수당 계산에는 시급과 주 소정근로시간이 필요합니다. 예: 시급 11000원, 주 20시간 주휴수당", None
-        result = calc_weekly(hourly_wage, weekly_hours)
-        return f"{result.label}은 {format_won(result.amount)}입니다.", result
-
-    hourly_wage = _first_money_near(tokens, text, r"시급|시간급") or (tokens[0]["value"] if tokens else 0)
-    daily_hours = _first_number(text, [r"(?:하루|1일|일)\s*(\d+(?:\.\d+)?)\s*시간", r"(\d+(?:\.\d+)?)\s*시간씩"])
-    weekly_days = _first_number(text, [r"주\s*(\d+(?:\.\d+)?)\s*일"])
-    if not hourly_wage or daily_hours is None or weekly_days is None:
-        return "최저임금 확인에는 시급, 하루 근무시간, 주 근무일수가 필요합니다. 예: 최저임금 확인, 시급 9500원, 하루 8시간, 주 5일", None
-    result = calc_minimum(hourly_wage, daily_hours, weekly_days)
-    detail = f"예상 월 손해 {format_won(result.amount)}" if result.tone == "red" else f"실질 시급 {format_won(result.amount)}"
-    return f"{result.label}: {detail}", result
-
-
-def _detect_type(text: str) -> str | None:
-    if re.search(r"최저|최저임금|최저시급", text):
-        return "minimum"
-    if "주휴" in text:
-        return "weekly"
-    if "연차" in text:
-        return "annual"
-    if "퇴직" in text:
-        return "severance"
-    if re.search(r"시급|시간급", text) and re.search(r"주\s*\d+", text):
-        return "weekly"
-    return None
-
-
-def _money_tokens(text: str) -> list[dict]:
-    tokens = []
-    for match in re.finditer(r"(\d+(?:\.\d+)?)\s*(억|천만|백만|만원|만|원)", text.replace(",", "")):
-        number = float(match.group(1))
-        unit = match.group(2)
-        multiplier = {"억": 100000000, "천만": 10000000, "백만": 1000000, "만원": 10000, "만": 10000, "원": 1}[unit]
-        tokens.append({"value": round(number * multiplier), "index": match.start(), "raw": match.group(0)})
-    return tokens
-
-
-def _first_number(text: str, patterns: list[str]) -> float | None:
-    for pattern in patterns:
-        match = re.search(pattern, text)
-        if match:
-            return float(match.group(1))
-    return None
-
-
-def _service_period(text: str) -> dict | None:
-    years = _first_number(text, [r"(\d+(?:\.\d+)?)\s*년"]) or 0
-    months = _first_number(text, [r"(\d+(?:\.\d+)?)\s*개월"]) or 0
-    if not years and not months:
-        return None
-    total_months = round((years * 12) + months)
-    return {"years": total_months // 12, "months": total_months % 12, "total_months": total_months}
-
-
-def _first_money_near(tokens: list[dict], text: str, pattern: str) -> float | None:
-    for token in tokens:
-        start = max(0, token["index"] - 12)
-        end = token["index"] + 12
-        if re.search(pattern, text[start:end]):
-            return token["value"]
-    return None
+    """
+    LLM 기반 자연어 계산 처리.
+    LangGraph ReAct 에이전트(gpt-5.4-nano)가 자연어에서 파라미터를 추출하고
+    engine/calculator/core.py의 순수 계산 함수를 도구로 호출하여 결과를 반환합니다.
+    """
+    try:
+        from engine.calculator_engine import CalculatorEngine
+        engine = CalculatorEngine()
+        result = engine.calculate(text)
+        return result.get("answer", "죄송합니다. 결과를 생성하지 못했습니다."), None
+    except Exception as e:
+        return f"죄송합니다. 계산 중 오류가 발생했습니다: {e}", None
