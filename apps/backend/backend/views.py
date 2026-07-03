@@ -21,10 +21,6 @@ _DEMO_USERS = {
     },
 }
 
-def example(request):
-    return render(request, 'example/example.html')
-
-
 def landing(request):
     user = _current_user(request)
     if user and user["role"] == "admin":
