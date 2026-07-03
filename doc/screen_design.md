@@ -113,8 +113,7 @@
 | ③ | 이메일 입력란 | Input(email) | 이메일 형식, 필수 입력 |
 | ④ | 비밀번호 입력란 | Input(password) | 필수 입력 |
 | ⑤ | 로그인 버튼 | Button(submit) | POST `/login/` 요청 |
-| ⑥ | 데모 계정 안내 | Text Box | 관리자/일반 사용자 데모 계정 표시 |
-| ⑦ | 회원가입 링크 | Link | `/register/` 이동 |
+| ⑥ | 회원가입 링크 | Link | `/register/` 이동 |
 
 ### 기능 / 이벤트 설명
 

@@ -262,10 +262,13 @@ input:focus, textarea:focus, select:focus { border-color: #d9a638; box-shadow: 0
 .quick-grid button:hover { border-color: var(--gold-soft); background: var(--primary-soft); }
 
 .chat-window { min-height: 360px; max-height: 520px; overflow: auto; display: grid; align-content: start; gap: 12px; margin-bottom: 14px; }
-.chat-window.compact { min-height: 220px; max-height: 360px; }
+.chat-window.compact {
+    min-height: min(440px, 40vh);
+    max-height: min(640px, 60vh);
+}
 .message { max-width: 82%; padding: 13px 18px; border-radius: 16px; line-height: 1.65; font-size: 15px; }
 .message.user { justify-self: end; background: #f1ce82;  color: #3a3a3a; border-bottom-right-radius: 4px; }
-.message.ai { justify-self: start; background: #fff; border: 1px solid #edf0f4; border-bottom-left-radius: 4px; color: #1f2937; }
+.message.ai { justify-self: start; background: #fff; border: 1px solid #ebebeb; border-bottom-left-radius: 4px; color: #1f2937; }
 .message-actions { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eef2f7; display: flex; gap: 8px; flex-wrap: wrap; }
 .message-actions button { border: 0; border-radius: 999px; padding: 6px 10px; background: #f3f4f6; color: #4b5563; font-size: 12px; }
 .composer, .search-panel { display: flex; gap: 10px; padding: 10px; }
@@ -275,13 +278,24 @@ input:focus, textarea:focus, select:focus { border-color: #d9a638; box-shadow: 0
     border: 0;
     border-radius: 10px;
     padding: 10px 20px;
-    background: var(--cocoa);
+    background: var(--primary);
     color: #fff;
     font-weight: 800;
     transition: background .15s ease;
 }
 .composer button:hover { background: var(--primary-dark); }
 .textarea-composer textarea { resize: none; }
+
+#naturalCalcInput {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+#naturalCalcInput:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary); 
+}
 
 .drawer[hidden] { display: none; }
 .drawer { position: fixed; inset: 0; z-index: 20; display: flex; justify-content: flex-end; }

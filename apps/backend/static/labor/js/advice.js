@@ -36,4 +36,12 @@ export function initAdvice() {
     });
     document.querySelectorAll("[data-close-drawer]").forEach((node) =>
         node.addEventListener("click", () => drawer.hidden = true));
+
+    const initialQuestion = adviceSection.dataset.initialQuestion?.trim();
+    if (initialQuestion) {
+        send(initialQuestion);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("question");
+        window.history.replaceState({}, "", url);
+    }
 }

@@ -140,6 +140,7 @@ def user_app(request):
         {
             "user": user,
             "page": page,
+            "initial_question": request.GET.get("question", "").strip(),
             "quick_questions": advice.quick_questions(),
             "minimum_wage": calculator.MINIMUM_WAGE_2026,
             "news_categories": news.categories(),
