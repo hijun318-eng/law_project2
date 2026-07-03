@@ -7,11 +7,27 @@
 {% block content %}
 <header class="landing-header">
     <a class="brand brand-light" href="{% url 'landing' %}"><span class="brand-mark">§</span><span>노동OK</span></a>
+    {% if user %}
+        <nav class="landing-feature-nav">
+            <a href="{% url 'user_app' %}?page=home">AI 상담</a>
+            <a href="{% url 'user_app' %}?page=calculator">수당 계산기</a>
+            <a href="{% url 'user_app' %}?page=news">최신 뉴스</a>
+            <a href="{% url 'user_app' %}?page=mypage">마이페이지</a>
+        </nav>
+    {% endif %}
+
     <nav class="landing-actions">
-        <a class="ghost-link" href="{% url 'login' %}">로그인</a>
-        <a class="primary-link" href="{% url 'register' %}">무료 시작</a>
+        {% if user %}
+            <span class="ghost-link">{{ user.name }}님</span>
+            <a class="primary-link" href="{% url 'user_app' %}?page=home">AI 상담 시작</a>
+        {% else %}
+            <a class="ghost-link" href="{% url 'login' %}">로그인</a>
+            <a class="primary-link" href="{% url 'register' %}">무료 시작</a>
+        {% endif %}
     </nav>
 </header>
+
+
 
 <main>
     <section class="hero">

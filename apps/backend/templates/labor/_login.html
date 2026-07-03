@@ -10,15 +10,17 @@
             <p>계속하려면 로그인하세요</p>
             <form method="post" class="stack-form">
                 {% csrf_token %}
-                <label>이메일<input type="email" name="email" placeholder="admin@example.com" required></label>
+
+                {% if error %}
+                    <p class="form-error">{{ error }}</p>
+                {% endif %}
+
+
+                <label>이메일<input type="email" name="email" placeholder="admin@example.com" value="{{ email|default:'' }}" required></label>
                 <label>비밀번호<input type="password" name="password" placeholder="비밀번호" required></label>
                 <button class="full-button" type="submit">로그인</button>
             </form>
-            <div class="demo-box">
-                <strong>데모 계정</strong><br>
-                관리자: admin@example.com / 임의 비밀번호<br>
-                일반: user@example.com / 임의 비밀번호
-            </div>
+            
             <p class="auth-switch">계정이 없으신가요? <a href="{% url 'register' %}">회원가입</a></p>
         </div>
     </section>
