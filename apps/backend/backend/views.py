@@ -6,24 +6,31 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
 from .services import advice, calculator, dashboard, news
+from engine.router_engine import router_engine
+from engine.tools.news_search_tool import NewsSearchTool
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
+from django.contrib.auth.models import User
 
-# DB 연결하고 삭제 필요
-_DEMO_USERS = {
-    "admin@example.com": {
-        "name": "관리자",
-        "password": "11111111",
-        "role": "admin",
-    },
-    "user@example.com": {
-        "name": "김민준",
-        "password": "11111111",
-        "role": "user",
-    },
-}
+news_search_tool = NewsSearchTool()
 
-def example(request):
-    return render(request, 'example/example.html')
+def _ensure_default_users():
+    """최초 실행 시 데모 계정이 없으면 DB에 생성 (비밀번호 해싱됨)"""
+    if User.objects.filter(username="admin@example.com").exists():
+        return
+    User.objects.create_superuser(
+        username="admin@example.com",
+        email="admin@example.com",
+        password="11111111",
+        first_name="관리자",
+    )
+    User.objects.create_user(
+        username="user@example.com",
+        email="user@example.com",
+        password="11111111",
+        first_name="김민준",
+    )
 
+_ensure_default_users()
 
 def landing(request):
     user = _current_user(request)
@@ -61,30 +68,23 @@ def login_view(request):
         email = request.POST.get("email", "").strip().lower()
         password = request.POST.get("password", "").strip()
 
-        account = _DEMO_USERS.get(email) if email else None
+        user = authenticate(request, username=email, password=password)
 
-        # 데모 구현: 비밀번호 해시 비교는 없지만, "가입된 이메일인지" +
-        # "값이 비어있지 않은지"는 검증해 실패 케이스를 만들어둔다.
-        if not email or not password or account is None or account["password"] != password:
-            return render(
-                request,
-                "labor/_login.html",
-                {
-                    "error": "이메일 또는 비밀번호가 일치하지 않습니다.",
-                    "email": email,
-                },
-                status=401,
-            )
+        if user is not None:
+            auth_login(request, user)
+            request.session["labor_user"] = {
+                "name": user.first_name,
+                "email": user.username,
+                "role": "admin" if user.is_staff else "user",
+            }
+            return redirect("admin_console") if user.is_staff else redirect("landing")
 
-        request.session["labor_user"] = {
-            "name": account["name"],
-            "email": email,
-            "role": account["role"],
-        }
-
-        if account["role"] == "admin":
-            return redirect("admin_console")
-        return redirect("landing")
+        return render(
+            request,
+            "labor/_login.html",
+            {"error": "이메일 또는 비밀번호가 일치하지 않습니다.", "email": email},
+            status=401,
+        )
 
     return render(request, "labor/_login.html")
 
@@ -95,11 +95,11 @@ def register_view(request):
         email = request.POST.get("email", "").strip().lower()
         password = request.POST.get("password", "")
         password_confirm = request.POST.get("password_confirm", "")
-        
+
         error = None
         if not name or not email or not password or not password_confirm:
             error = "모든 항목을 입력해주세요."
-        elif email in _DEMO_USERS:
+        elif User.objects.filter(username=email).exists():
             error = "이미 가입된 이메일이 있습니다."
         elif password != password_confirm:
             error = "비밀번호가 일치하지 않습니다."
@@ -114,15 +114,28 @@ def register_view(request):
                 status=400,
             )
 
-        _DEMO_USERS[email] = {"name": name, "password": password, "role": "user"}
-        request.session["labor_user"] = {"name": name, "email": email, "role": "user"}
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password,
+            first_name=name,
+        )
+
+        # 회원가입 후 자동 로그인
+        auth_login(request, user)
+        request.session["labor_user"] = {
+            "name": user.first_name,
+            "email": user.username,
+            "role": "user",
+        }
         return redirect("landing")
-    
+
     return render(request, "labor/_register.html")
 
 
 def logout_view(request):
     request.session.pop("labor_user", None)
+    auth_logout(request)
     return redirect("landing")
 
 
@@ -209,7 +222,10 @@ def prompt_api(request):
 def advice_api(request):
     payload = _json_payload(request)
     question = payload.get("question", "")
-    return JsonResponse({"answer": advice.answer_question(question)})
+    if not question:
+        return JsonResponse({"error": "질문을 입력해주세요."}, status=400)
+    result = router_engine.run(question)
+    return JsonResponse({"answer": result.content})
 
 
 @require_POST
@@ -232,8 +248,24 @@ def calculate_api(request):
 def news_api(request):
     query = request.GET.get("q", "")
     category = request.GET.get("category", "전체")
-    items = news.search_news(query, category)
-    return JsonResponse({"items": items, "summary": news.summarize(query, items)})
+
+    res = news_search_tool.run(query=query if query.strip() else "노동법", display=10)
+
+    if res.success and res.data.get("results"):
+        items = []
+        for item in res.data["results"]:
+            items.append({
+                "title": item.get("title", ""),
+                "summary": item.get("description", ""),
+                "date": _format_pubdate(item.get("pubDate", "")),
+                "category": category,
+            })
+        summary_text = f"'{query}' 관련 {len(items)}건의 뉴스를 찾았습니다." if query else f"최신 노동법 뉴스 {len(items)}건"
+    else:
+        items = []
+        summary_text = "뉴스를 불러오지 못했습니다."
+
+    return JsonResponse({"items": items, "summary": summary_text})
 
 
 def _current_user(request):
@@ -252,3 +284,13 @@ def _float(value, default: float) -> float:
         return float(str(value).replace(",", ""))
     except (TypeError, ValueError):
         return default
+
+
+def _format_pubdate(pubdate: str) -> str:
+    """Naver API pubDate (예: 'Tue, 30 Jun 2026 10:30:00 +0900') → '2026-06-30'"""
+    import datetime
+    try:
+        dt = datetime.datetime.strptime(pubdate.split(" +")[0].split(" -")[0], "%a, %d %b %Y %H:%M:%S")
+        return dt.strftime("%Y-%m-%d")
+    except (ValueError, IndexError):
+        return pubdate[:10] if len(pubdate) >= 10 else ""
