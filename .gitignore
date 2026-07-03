@@ -27,3 +27,6 @@ pyrightconfig.json
 frontend/node_modules/
 frontend/
 .DS_Store
+
+# Sisyphus 작업 계획
+.sisyphus/

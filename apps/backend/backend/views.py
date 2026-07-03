@@ -5,13 +5,26 @@ from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
-from .services import advice, calculator, dashboard, news
+from .services import calculator, dashboard
 from engine.router_engine import router_engine
 from engine.tools.news_search_tool import NewsSearchTool
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
 
 news_search_tool = NewsSearchTool()
+
+# advice.py quick_questions() → 인라인 상수
+_QUICK_QUESTIONS = [
+    "퇴직금은 어떻게 계산하나요?",
+    "임금체불 신고는 어디에 하나요?",
+    "부당해고를 당했습니다. 어떻게 해야 하나요?",
+    "주휴수당은 어떻게 계산하나요?",
+]
+
+_NEWS_CATEGORIES = [
+    "전체", "최저임금", "직장내괴롭힘", "임금", "육아휴직",
+    "노조", "해고", "퇴직금", "산재",
+]
 
 def _ensure_default_users():
     """최초 실행 시 데모 계정이 없으면 DB에 생성 (비밀번호 해싱됨)"""
@@ -146,7 +159,24 @@ def user_app(request):
     page = request.GET.get("page", "home")
     if page not in {"home", "calculator", "news", "mypage"}:
         page = "home"
-    news_items = news.search_news()
+
+    # NewsSearchTool 직접 호출
+    news_res = news_search_tool.run(query="노동법", display=10)
+    news_items = []
+    if news_res.success and news_res.data.get("results"):
+        for i, item in enumerate(news_res.data["results"], start=1):
+            news_items.append({
+                "id": i,
+                "title": item.get("title", ""),
+                "date": _format_pubdate(item.get("pubDate", "")),
+                "category": "전체",
+                "summary": item.get("description", ""),
+            })
+    news_summary_text = (
+        f"최신 노동법 뉴스 {len(news_items)}건" if news_items
+        else "뉴스를 불러오지 못했습니다."
+    )
+
     return render(
         request,
         "labor/app.html",
@@ -154,11 +184,11 @@ def user_app(request):
             "user": user,
             "page": page,
             "initial_question": request.GET.get("question", "").strip(),
-            "quick_questions": advice.quick_questions(),
+            "quick_questions": _QUICK_QUESTIONS,
             "minimum_wage": calculator.MINIMUM_WAGE_2026,
-            "news_categories": news.categories(),
+            "news_categories": _NEWS_CATEGORIES,
             "news_items": news_items,
-            "news_summary": news.summarize("", news_items),
+            "news_summary": news_summary_text,
             "history": [
                 {"q": "퇴직금 계산 방법이 궁금합니다", "date": "2026-06-29", "category": "퇴직금"},
                 {"q": "임금체불 신고는 어디에 하나요?", "date": "2026-06-28", "category": "임금체불"},

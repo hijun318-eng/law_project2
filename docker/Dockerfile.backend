@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY apps/backend/requirements.txt apps/backend/requirements.txt
 RUN pip install --no-cache-dir -r apps/backend/requirements.txt
 
-COPY . .
+COPY apps/backend/ apps/backend/
 
 WORKDIR /app/apps/backend
 EXPOSE 8000
