@@ -1,14 +1,30 @@
 from pathlib import Path
 import re
+import requests
+import logging
 
-# TODO Phase 6: Replace with ranker HTTP call
-try:
-    from langchain_community.cross_encoders import HuggingFaceCrossEncoder
-    reranker = HuggingFaceCrossEncoder(
-        model_name="Dongjin-kr/ko-reranker"
-    )
-except ImportError:
-    reranker = None
+logger = logging.getLogger(__name__)
+
+def _call_ranker(query: str, documents: list[str], timeout: int = 30) -> list[float]:
+    """랭커 마이크로서비스를 HTTP로 호출. 실패 시 균등 점수 fallback."""
+    try:
+        from django.conf import settings
+        ranker_url = settings.RANKER_URL
+    except (ImportError, AttributeError):
+        ranker_url = 'http://localhost:8001'
+
+    try:
+        resp = requests.post(
+            f'{ranker_url}/rerank/',
+            json={'query': query, 'documents': documents},
+            timeout=timeout,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get('scores', [])
+    except requests.RequestException as e:
+        logger.warning(f'랭커 호출 실패: {e}')
+        return [0.5] * len(documents)
 
 from engine.database import law_db, precedent_db
 from engine.retrievers.law_retriever import law_retriever
@@ -38,7 +54,7 @@ def retrieve_precedent_node(state: GraphState) -> dict:
         (question, doc.metadata.get("llm_brief", "") or doc.page_content[:1000])
         for doc in unique
     ]
-    scores = reranker.score(pairs)
+    scores = _call_ranker(question, [p[1] for p in pairs])
 
     reranked = sorted(zip(unique, scores), key=lambda x: x[1], reverse=True)
 
