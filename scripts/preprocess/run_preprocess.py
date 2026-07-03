@@ -1,8 +1,8 @@
 """
 전처리 통합 실행 스크립트
 
-apps/backend/data/raw/의 원본 파일(PDF, MD)을 읽어
-apps/backend/data/process/에 JSON으로 저장합니다.
+data/raw/의 원본 파일(PDF, MD)을 읽어
+data/process/에 JSON으로 저장합니다.
 
 실행 방법 (프로젝트 루트에서):
     python scripts/preprocess/run_preprocess.py
@@ -24,20 +24,22 @@ from preprocess_case import run_case
 from preprocess_law import run_law
 from preprocess_sac import run_sac
 
+# 프로젝트 루트 (config.py의 BASE_DIR과 동일)
+_PROJECT_ROOT = _BACKEND_DIR.parent.parent
 
-# apps/backend/ 기준 절대 경로
+# 프로젝트 루트 기준 절대 경로
 CONFIG = {
     "qna": {
-        "input_dir": str(_BACKEND_DIR / "data" / "raw" / "pdf"),
-        "output_dir": str(_BACKEND_DIR / "data" / "process" / "qna"),
+        "input_dir": str(_PROJECT_ROOT / "data" / "raw" / "pdf"),
+        "output_dir": str(_PROJECT_ROOT / "data" / "process" / "qna"),
     },
     "case": {
-        "input_dir": str(_BACKEND_DIR / "data" / "raw" / "case"),
-        "output_dir": str(_BACKEND_DIR / "data" / "process" / "case"),
+        "input_dir": str(_PROJECT_ROOT / "data" / "raw" / "case"),
+        "output_dir": str(_PROJECT_ROOT / "data" / "process" / "case"),
     },
     "law": {
-        "input_dir": str(_BACKEND_DIR / "data" / "raw" / "law"),
-        "output_dir": str(_BACKEND_DIR / "data" / "process" / "law"),
+        "input_dir": str(_PROJECT_ROOT / "data" / "raw" / "law"),
+        "output_dir": str(_PROJECT_ROOT / "data" / "process" / "law"),
     },
 }
 
