@@ -1,0 +1,13 @@
+{% extends "labor/base.html" %}
+{% block content %}
+<div class="workspace" data-page="{{ page }}">
+    {% include "labor/partials/_sidebar.html" %}
+    <main class="workspace-main">
+        {% include "labor/partials/_mobile_bar.html" %}
+        {% if page == 'home' %}{% include "labor/partials/_advice.html" %}{% endif %}
+        {% if page == 'calculator' %}{% include "labor/partials/_calculator.html" %}{% endif %}
+        {% if page == 'news' %}{% include "labor/partials/_news.html" %}{% endif %}
+        {% if page == 'mypage' %}{% include "labor/partials/_mypage.html" %}{% endif %}
+    </main>
+</div>
+{% endblock %}

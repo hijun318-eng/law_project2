@@ -1,0 +1,17 @@
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+        <a class="brand brand-light" href="{% url 'user_app' %}"><span class="brand-mark">§</span><span>노동OK</span></a>
+        <button class="icon-button mobile-only" data-close-sidebar>×</button>
+    </div>
+    <nav class="side-nav">
+        <a class="{% if page == 'home' %}active{% endif %}" href="{% url 'user_app' %}?page=home">홈 (AI 상담)</a>
+        <a class="{% if page == 'calculator' %}active{% endif %}" href="{% url 'user_app' %}?page=calculator">수당 계산기</a>
+        <a class="{% if page == 'news' %}active{% endif %}" href="{% url 'user_app' %}?page=news">최신 뉴스</a>
+        <a class="{% if page == 'mypage' %}active{% endif %}" href="{% url 'user_app' %}?page=mypage">마이페이지</a>
+    </nav>
+    <div class="sidebar-user">
+        <div class="avatar">{{ user.name|slice:":1" }}</div>
+        <div><strong>{{ user.name }}</strong><span>{{ user.email }}</span></div>
+        <a href="{% url 'logout' %}">로그아웃</a>
+    </div>
+</aside>

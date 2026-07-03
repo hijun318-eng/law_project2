@@ -10,3 +10,6 @@ workspace/chroma_db/
 # 캐시 json
 data/cache
 .omo/db.sqlite3
+
+frontend/node_modules/
+frontend/
