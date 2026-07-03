@@ -302,7 +302,17 @@ input:focus, textarea:focus, select:focus { border-color: #d9a638; box-shadow: 0
 
 .drawer[hidden] { display: none; }
 .drawer { position: fixed; inset: 0; z-index: 20; display: flex; justify-content: flex-end; }
-.drawer-backdrop { position: absolute; inset: 0; border: 0; background: rgba(0,0,0,.32); }
+.drawer-backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: rgba(0,0,0,.32);
+    transition: background .2s ease;
+}
+
+.drawer-backdrop:hover {
+    background: rgba(0,0,0,.45);
+}
 .drawer-panel { position: relative; width: min(420px, 100%); background: #fff; padding: 20px; overflow: auto; box-shadow: -20px 0 50px rgba(0,0,0,.18); }
 .drawer-panel header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); margin: -4px 0 18px; }
 .drawer-panel header button { border: 0; background: transparent; font-size: 24px; }

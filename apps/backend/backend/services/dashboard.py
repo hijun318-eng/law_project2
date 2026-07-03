@@ -45,18 +45,7 @@ DAILY_DATA = [
     {"date": "6/30", "questions": 84, "users": 27},
     {"date": "7/1", "questions": 38, "users": 9},
 ]
-
-FEEDBACK_DATA = [
-    {"id": 1, "question": "퇴직금 계산 방법이 궁금합니다", "category": "퇴직금", "likes": 87, "dislikes": 3, "score": 96.7, "memo": ""},
-    {"id": 2, "question": "임금체불 신고 절차는?", "category": "임금체불", "likes": 65, "dislikes": 8, "score": 89.0, "memo": ""},
-    {"id": 3, "question": "부당해고 구제신청 방법", "category": "부당해고", "likes": 54, "dislikes": 6, "score": 90.0, "memo": ""},
-    {"id": 4, "question": "연차 계산 (1년 미만)", "category": "연차휴가", "likes": 42, "dislikes": 7, "score": 85.7, "memo": ""},
-    {"id": 5, "question": "최저임금 위반 시 처벌 규정", "category": "최저임금", "likes": 38, "dislikes": 9, "score": 80.9, "memo": ""},
-    {"id": 6, "question": "포괄임금제가 합법인가요?", "category": "포괄임금제", "likes": 11, "dislikes": 19, "score": 36.7, "memo": ""},
-    {"id": 7, "question": "수습 기간 중 해고 가능한가요?", "category": "부당해고", "likes": 14, "dislikes": 16, "score": 46.7, "memo": ""},
-    {"id": 8, "question": "프리랜서도 퇴직금 받을 수 있나요?", "category": "퇴직금", "likes": 8, "dislikes": 18, "score": 30.8, "memo": ""},
-]
-
+from backend.services.mock_data import FEEDBACK_DATA
 
 def dashboard_context() -> dict:
     max_questions = max(item["questions"] for item in DAILY_DATA)
@@ -104,24 +93,24 @@ from collections import defaultdict
 
 
 def feedback_context() -> dict:
-    total_likes = sum(1 for item in FEEDBACK_DATA if item["liked"])
-    total_dislikes = sum(1 for item in FEEDBACK_DATA if not item["liked"])
-    avg_score = round(total_likes / len(FEEDBACK_DATA) * 100, 1)
+    total_likes = sum(1 for item in FEEDBACK_DATA if item.get("liked", False))
+    total_dislikes = sum(1 for item in FEEDBACK_DATA if not item.get("liked", False))
+    avg_score = round(total_likes / len(FEEDBACK_DATA) * 100, 1) if FEEDBACK_DATA else 0.0
 
     grouped: dict[str, list] = {}
     for item in FEEDBACK_DATA:
-        grouped.setdefault(item["category"], []).append(item)
+        grouped.setdefault(item.get("category", "미분류"), []).append(item)
 
     category_groups = []
     for category, items in grouped.items():
-        likes = sum(1 for i in items if i["liked"])
+        likes = sum(1 for i in items if i.get("liked", False))
         dislikes = len(items) - likes
-        score = round(likes / len(items) * 100)
+        score = round(likes / len(items) * 100) if items else 0
 
         by_date: dict[str, dict] = defaultdict(lambda: {"likes": 0, "dislikes": 0})
         for i in items:
             date_key = i["created_at"].split(" ")[0][5:]
-            if i["liked"]:
+            if i.get("liked", False):
                 by_date[date_key]["likes"] += 1
             else:
                 by_date[date_key]["dislikes"] += 1
@@ -158,7 +147,7 @@ def feedback_context() -> dict:
 
     return {
         "category_groups": category_groups,
-        "score_ranking": category_groups, 
+        "score_ranking": category_groups,
         "low_category_count": sum(1 for g in category_groups if g["needs_attention"]),
         "total_likes": f"{total_likes:,}",
         "total_dislikes": f"{total_dislikes:,}",

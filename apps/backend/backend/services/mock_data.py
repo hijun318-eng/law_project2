@@ -64,11 +64,6 @@ FEEDBACK_DATA = [
     {"id": 1028, "category": "임금체불", "liked": True,  "created_at": "2026-06-30 16:02"},
     {"id": 1025, "category": "임금체불", "liked": False, "created_at": "2026-06-30 12:10"},
     {"id": 1022, "category": "임금체불", "liked": True,  "created_at": "2026-06-29 11:47"},
-    {"id": 31, "category": "임금체불", "liked": False, "created_at": "2026-06-30 09:14"},
-    {"id": 30, "category": "임금체불", "liked": False, "created_at": "2026-06-30 08:50"},
-    {"id": 28, "category": "임금체불", "liked": True,  "created_at": "2026-06-30 16:02"},
-    {"id": 25, "category": "임금체불", "liked": False, "created_at": "2026-06-30 12:10"},
-    {"id": 22, "category": "임금체불", "liked": True,  "created_at": "2026-06-29 11:47"},
 
     {"id": 1019, "category": "부당해고", "liked": False, "created_at": "2026-06-29 08:30"},
     {"id": 1017, "category": "부당해고", "liked": True,  "created_at": "2026-06-28 20:15"},

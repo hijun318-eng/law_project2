@@ -11,8 +11,9 @@ export function initAdminFeedback() {
 
     document.querySelectorAll("[data-toggle-group]").forEach((head) => head.addEventListener("click", () => {
         const group = head.closest("[data-feedback-group]");
-        const body = group.querySelector("[data-group-body]");
+        const body = group?.querySelector("[data-group-body]");
         const chevron = head.querySelector("[data-chevron]");
+        if (!body || !chevron) return;
         body.hidden = !body.hidden;
         chevron.classList.toggle("open", !body.hidden);
     }));
