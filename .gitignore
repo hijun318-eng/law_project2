@@ -16,4 +16,10 @@ data/
 # ChromaDB 벡터 데이터베이스
 vector_db/
 
+# Django SQLite databases (개발용, 재생산 가능)
+**/db.sqlite3
+
+# Pyright/Pylance 로컬 설정
+pyrightconfig.json
+
 .omo/db.sqlite3
