@@ -11,6 +11,8 @@ from engine.tools.news_search_tool import NewsSearchTool
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
 
+from chat.models import ChatHistory
+
 news_search_tool = NewsSearchTool()
 
 # advice.py quick_questions() → 인라인 상수
@@ -297,8 +299,30 @@ def advice_api(request):
     question = payload.get("question", "")
     if not question:
         return JsonResponse({"error": "질문을 입력해주세요."}, status=400)
-    result = router_engine.run(question)
-    return JsonResponse({"answer": result.content})
+
+    mode = payload.get("mode", "rag")
+    session_key = request.session.session_key or request.session.create()
+    user = request.user if request.user.is_authenticated else None
+
+    chat = ChatHistory.objects.create(
+        session_key=session_key,
+        question=question,
+        mode=mode,
+        user=user,
+    )
+
+    answer = ""
+    try:
+        result = router_engine.run(question)
+        answer = result.content
+        chat.mode = result.mode
+    except Exception as e:
+        answer = f"오류 발생: {str(e)}"
+    finally:
+        chat.answer = answer
+        chat.save()
+
+    return JsonResponse({"answer": answer, "message_id": chat.id})
 
 
 @require_POST

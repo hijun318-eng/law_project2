@@ -1,7 +1,8 @@
 <section class="content-narrow" data-news-api="{% url 'news_api' %}">
     <h1>최신 노동법 뉴스</h1>
     <p class="lead">카테고리나 자연어 질의로 노동법 관련 소식을 찾아보세요</p>
-    <form class="search-panel" id="newsForm">
+    <form class="search-panel" id="newsForm" method="POST" action="?page=news">
+        {% csrf_token %}
         <input id="newsQuery" placeholder="예: 대기업 노조 관련 뉴스 알려줘" value="대기업 노조 관련 뉴스 알려줘">
         <button type="submit">검색</button>
     </form>

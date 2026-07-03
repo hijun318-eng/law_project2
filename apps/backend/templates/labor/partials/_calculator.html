@@ -12,7 +12,7 @@
             <button type="button" data-calc-type="weekly">주휴수당</button>
             <button type="button" data-calc-type="minimum">최저임금 확인</button>
         </div>
-        <form id="calcForm" class="stack-form">
+        <form id="calcForm" class="stack-form" method="POST" action="?page=calculator">
             {% csrf_token %}
             <label data-salary-field>월 기본급 (원)<input name="salary" value="3500000"></label>
             <label data-months-field>근무 기간 (개월)<input name="months" value="14"></label>
@@ -29,7 +29,7 @@
         <div class="chat-window compact" id="calcMessages">
             <div class="message ai">자연어로 근로조건을 적어주세요. 예: 시급 11000원, 주 20시간 주휴수당</div>
         </div>
-        <form class="composer textarea-composer" id="naturalCalcForm">
+        <form class="composer textarea-composer" id="naturalCalcForm" method="POST" action="?page=calculator">
             {% csrf_token %}
             <textarea id="naturalCalcInput" rows="2" placeholder="예: 퇴직금 계산해줘, 3년 근무, 월 300만원">퇴직금 계산해줘, 3년 근무, 월 300만원</textarea>
             <button type="submit">전송</button>
