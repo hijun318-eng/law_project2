@@ -373,11 +373,11 @@
 
 .empty-state { text-align: center; padding: 32px 0; color: var(--muted); font-size: 14px; }
 
-.stat-card .card-meta { display: block; margin-bottom: 6px; color: #3c3c3d; font-size: 12px; font-weight: 700; }
+.stat-card { display: block; margin-bottom: 6px; color: #3c3c3d; font-size: 12px; font-weight: 700; }
 
 .stat-card .split-row {
     width: fit-content;
-    min-width: 110px;   /* 원하는 만큼 조절 */
+    min-width: 110px; 
     gap: 20px;
 }
 

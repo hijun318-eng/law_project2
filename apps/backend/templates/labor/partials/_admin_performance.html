@@ -7,7 +7,6 @@
     <div class="stat-grid">
         {% for node in langgraph_nodes %}
         <article class="stat-card blue">
-            <span class="card-meta">{{ node.calls }}회 호출</span>
             <p style="font-weight:700; color:var(--ink); margin-top:6px;">{{ node.label }}</p>
             <div class="split-row"><span>평균</span><b>{{ node.avg_ms }}ms</b></div>
             <div class="split-row"><span>최대</span><b class="bad">{{ node.max_ms }}ms</b></div>
