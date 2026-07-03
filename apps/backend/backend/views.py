@@ -1,22 +1,40 @@
 import json
 
-from django.http import JsonResponse
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
 from .services import advice, calculator, dashboard, news
+
+# DB 연결하고 삭제 필요
+_DEMO_USERS = {
+    "admin@example.com": {
+        "name": "관리자",
+        "password": "11111111",
+        "role": "admin",
+    },
+    "user@example.com": {
+        "name": "김민준",
+        "password": "11111111",
+        "role": "user",
+    },
+}
 
 def example(request):
     return render(request, 'example/example.html')
 
 
 def landing(request):
-    if _current_user(request):
-        return redirect(_home_for(request))
+    user = _current_user(request)
+    if user and user["role"] == "admin":
+        return redirect("admin_console")
+    
     return render(
         request,
         "labor/landing.html",
         {
+            "user": user,
             "data_sources": [
                 "근로기준법", "산업안전보건법", "노동위원회 판례",
                 "고용노동부 행정해석", "중앙노동위원회", "대법원 판례",
@@ -40,21 +58,66 @@ def landing(request):
 
 def login_view(request):
     if request.method == "POST":
-        email = request.POST.get("email", "").strip() or "user@example.com"
-        role = "admin" if email == "admin@example.com" else "user"
-        request.session["labor_user"] = {"name": "관리자" if role == "admin" else "김민준", "email": email, "role": role}
-        return redirect(_home_for(request))
+        email = request.POST.get("email", "").strip().lower()
+        password = request.POST.get("password", "").strip()
+
+        account = _DEMO_USERS.get(email) if email else None
+
+        # 데모 구현: 비밀번호 해시 비교는 없지만, "가입된 이메일인지" +
+        # "값이 비어있지 않은지"는 검증해 실패 케이스를 만들어둔다.
+        if not email or not password or account is None or account["password"] != password:
+            return render(
+                request,
+                "labor/_login.html",
+                {
+                    "error": "이메일 또는 비밀번호가 일치하지 않습니다.",
+                    "email": email,
+                },
+                status=401,
+            )
+
+        request.session["labor_user"] = {
+            "name": account["name"],
+            "email": email,
+            "role": account["role"],
+        }
+
+        if account["role"] == "admin":
+            return redirect("admin_console")
+        return redirect("landing")
+
     return render(request, "labor/_login.html")
 
 
 def register_view(request):
     if request.method == "POST":
-        request.session["labor_user"] = {
-            "name": request.POST.get("name", "").strip() or "김민준",
-            "email": request.POST.get("email", "").strip() or "user@example.com",
-            "role": "user",
-        }
-        return redirect("user_app")
+        name = request.POST.get("name", "").strip()
+        email = request.POST.get("email", "").strip().lower()
+        password = request.POST.get("password", "")
+        password_confirm = request.POST.get("password_confirm", "")
+        
+        error = None
+        if not name or not email or not password or not password_confirm:
+            error = "모든 항목을 입력해주세요."
+        elif email in _DEMO_USERS:
+            error = "이미 가입된 이메일이 있습니다."
+        elif password != password_confirm:
+            error = "비밀번호가 일치하지 않습니다."
+        elif len(password) < 8:
+            error = "비밀번호는 8자 이상이어야 합니다."
+
+        if error:
+            return render(
+                request,
+                "labor/_register.html",
+                {"error": error, "name": name, "email": email},
+                status=400,
+            )
+
+        _DEMO_USERS[email] = {"name": name, "password": password, "role": "user"}
+        request.session["labor_user"] = {"name": name, "email": email, "role": "user"}
+        return redirect("landing")
+    
     return render(request, "labor/_register.html")
 
 
@@ -99,7 +162,6 @@ _TAB_CONTEXT_BUILDERS = {
     "performance": dashboard.performance_context,
 }
 
-from django.views.decorators.csrf import ensure_csrf_cookie
 
 @ensure_csrf_cookie
 def admin_console(request):
@@ -107,7 +169,7 @@ def admin_console(request):
     if not user:
         return redirect("login")
     if user["role"] != "admin":
-        return redirect("user_app")
+        return HttpResponseForbidden("이 페이지에 접근할 권한이 없습니다.")
     tab = request.GET.get("tab", "dashboard")
     if tab not in _TAB_CONTEXT_BUILDERS:
         tab = "dashboard"
@@ -175,11 +237,6 @@ def news_api(request):
 
 def _current_user(request):
     return request.session.get("labor_user")
-
-
-def _home_for(request):
-    user = _current_user(request)
-    return "admin_console" if user and user["role"] == "admin" else "user_app"
 
 
 def _json_payload(request) -> dict:

@@ -60,6 +60,39 @@
     to { transform: translateX(-50%); }
 }
 
+.landing-header{
+    display:flex;
+    align-items:center;
+}
+
+.brand {
+    flex: 1;
+}
+
+.landing-feature-nav{
+    flex: 1;
+    display:flex;
+    gap:22px;
+    justify-content:center;
+}
+.landing-feature-nav a {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    color: #4e4e4f;
+}
+
+.landing-actions {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.landing-feature-nav a:hover { background: var(--primary-soft); color: var(--primary); }
+
+
 /* ── 2. 채팅 목업 (히어로) ────────────────────────────── */
 .hero-mock-wrap { background: var(--bg); padding: 60px 40px 90px; }
 .hero-mock {
