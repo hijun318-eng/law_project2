@@ -7,6 +7,9 @@ from django.views.decorators.http import require_POST
 
 from .services import advice, calculator, dashboard, news
 from engine.router_engine import router_engine
+from engine.tools.news_search_tool import NewsSearchTool
+
+news_search_tool = NewsSearchTool()
 
 # DB 연결하고 삭제 필요
 _DEMO_USERS = {
@@ -231,8 +234,24 @@ def calculate_api(request):
 def news_api(request):
     query = request.GET.get("q", "")
     category = request.GET.get("category", "전체")
-    items = news.search_news(query, category)
-    return JsonResponse({"items": items, "summary": news.summarize(query, items)})
+
+    res = news_search_tool.run(query=query if query.strip() else "노동법", display=10)
+
+    if res.success and res.data.get("results"):
+        items = []
+        for item in res.data["results"]:
+            items.append({
+                "title": item.get("title", ""),
+                "summary": item.get("description", ""),
+                "date": _format_pubdate(item.get("pubDate", "")),
+                "category": category,
+            })
+        summary_text = f"'{query}' 관련 {len(items)}건의 뉴스를 찾았습니다." if query else f"최신 노동법 뉴스 {len(items)}건"
+    else:
+        items = []
+        summary_text = "뉴스를 불러오지 못했습니다."
+
+    return JsonResponse({"items": items, "summary": summary_text})
 
 
 def _current_user(request):
@@ -251,3 +270,13 @@ def _float(value, default: float) -> float:
         return float(str(value).replace(",", ""))
     except (TypeError, ValueError):
         return default
+
+
+def _format_pubdate(pubdate: str) -> str:
+    """Naver API pubDate (예: 'Tue, 30 Jun 2026 10:30:00 +0900') → '2026-06-30'"""
+    import datetime
+    try:
+        dt = datetime.datetime.strptime(pubdate.split(" +")[0].split(" -")[0], "%a, %d %b %Y %H:%M:%S")
+        return dt.strftime("%Y-%m-%d")
+    except (ValueError, IndexError):
+        return pubdate[:10] if len(pubdate) >= 10 else ""
