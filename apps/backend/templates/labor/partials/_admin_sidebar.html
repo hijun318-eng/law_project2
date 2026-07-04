@@ -11,7 +11,7 @@
 
         <span class="side-nav-label">시스템 관리</span>
         <a class="{% if tab == 'prompts' %}active{% endif %}" href="{% url 'admin_console' %}?tab=prompts">프롬프트 관리</a>
-        <a class="{% if tab == 'vectordb' %}active{% endif %}" href="{% url 'admin_console' %}?tab=vectordb">데이터 / 벡터DB</a>
+        {% comment %} <a class="{% if tab == 'vectordb' %}active{% endif %}" href="{% url 'admin_console' %}?tab=vectordb">데이터 / 벡터DB</a> {% endcomment %}
         <a class="{% if tab == 'performance' %}active{% endif %}" href="{% url 'admin_console' %}?tab=performance">성능 모니터링</a>
     </nav>
     <div class="sidebar-user">
