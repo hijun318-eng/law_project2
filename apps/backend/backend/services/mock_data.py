@@ -20,16 +20,6 @@ MOCK_QUESTIONS = [
     {"id": 8, "user": "박지호", "category": "산업재해", "question": "업무 중 부상을 당했는데 산재 신청 절차가 어떻게 되나요?", "date": "2026-06-27 10:11", "likes": 47, "dislikes": 2},
 ]
 
-FAQ_DATA = [
-    {"name": "임금체불", "count": 342},
-    {"name": "부당해고", "count": 287},
-    {"name": "퇴직금", "count": 198},
-    {"name": "연차휴가", "count": 156},
-    {"name": "최저임금", "count": 134},
-    {"name": "직장내괴롭힘", "count": 98},
-    {"name": "산업재해", "count": 76},
-]
-
 CATEGORY_PIE = [
     {"name": "임금체불", "value": 27},
     {"name": "부당해고", "value": 22},
@@ -69,3 +59,39 @@ NEWS_DATA = [
     {"id": 8, "title": "산업재해 신청 절차 간소화 논의", "date": "2026-05-30",  "summary": "업무상 질병과 사고에 대한 산재 신청 절차를 간소화하는 방안이 논의되고 있습니다. 입증 자료 제출 부담과 처리 기간 단축이 주요 과제로 제시됐습니다."},
 ]
 
+
+PROMPT_TEMPLATES = {
+    "answer_prompt": {
+        "id": "answer_prompt",
+        "name": "answer_prompt",
+        "description": "AI 상담 답변 생성 프롬프트",
+        "version": 3,
+        "content": "당신은 노동법 전문 AI입니다. 아래 컨텍스트를 반드시 참고하여 정확하게 답변하세요.\n질문: {question}\n컨텍스트: {context}",
+        "placeholders": ["{question}", "{context}"],
+        "updated_at": "2026-06-28 14:20",
+        "updated_by": "관리자",
+        "history": [
+            {
+                "version": 3,
+                "updated_at": "2026-06-28 14:20",
+                "updated_by": "관리자",
+                "summary": "컨텍스트 강조 문구 추가",
+                "content": "당신은 노동법 전문 AI입니다. 아래 컨텍스트를 반드시 참고하여 정확하게 답변하세요.\n질문: {question}\n컨텍스트: {context}",
+            },
+            {
+                "version": 2,
+                "updated_at": "2026-06-20 09:10",
+                "updated_by": "관리자",
+                "summary": "초기 버전 개선",
+                "content": "당신은 노동법 전문 AI입니다.\n질문: {question}\n컨텍스트: {context}",
+            },
+            {
+                "version": 1,
+                "updated_at": "2026-06-10 11:00",
+                "updated_by": "관리자",
+                "summary": "최초 등록",
+                "content": "노동법 관련 질문에 답변하세요.\n질문: {question}",
+            },
+        ],
+    },
+}

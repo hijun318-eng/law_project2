@@ -324,13 +324,20 @@ def advice_api(request):
 
 @require_POST
 def feedback_api(request):
-    payload = _json_payload(request)
-    message_id = payload.get("message_id")
-    action = payload.get("action", "")
+    try:
+        payload = _json_payload(request)
+    except (ValueError, TypeError):
+        return JsonResponse({"error": "요청 본문을 해석할 수 없습니다."}, status=400)
 
-    # message_id validation
-    if message_id is None or not isinstance(message_id, int):
+    if not isinstance(payload, dict):
+        return JsonResponse({"error": "요청 본문을 해석할 수 없습니다."}, status=400)
+
+    try:
+        message_id = int(payload.get("message_id"))
+    except (TypeError, ValueError):
         return JsonResponse({"error": "message_id가 필요합니다."}, status=400)
+
+    action = payload.get("action", "")
 
     # action validation
     if action not in ("like", "dislike"):
@@ -358,7 +365,11 @@ def feedback_api(request):
         else:  # dislike
             chat.feedback = None  # cancel
 
-    chat.save(update_fields=["feedback"])
+    try:
+        chat.save(update_fields=["feedback"])
+    except Exception:
+        return JsonResponse({"error": "피드백 저장 중 오류가 발생했습니다."}, status=500)
+
     return JsonResponse({"ok": True, "feedback": chat.feedback})
 
 

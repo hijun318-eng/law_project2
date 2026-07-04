@@ -1,51 +1,4 @@
-MOCK_USERS = [
-    {"id": 1, "name": "김민준", "email": "minjun@example.com", "join_date": "2024-01-15", "last_login": "2026-06-30", "status": "active", "questions": 12},
-    {"id": 2, "name": "이서연", "email": "seoyeon@example.com", "join_date": "2024-02-20", "last_login": "2026-06-28", "status": "active", "questions": 8},
-    {"id": 3, "name": "박지호", "email": "jiho@example.com", "join_date": "2024-03-10", "last_login": "2026-05-15", "status": "suspended", "questions": 3},
-    {"id": 4, "name": "최유진", "email": "yujin@example.com", "join_date": "2024-04-05", "last_login": "2026-06-29", "status": "active", "questions": 24},
-    {"id": 5, "name": "정다은", "email": "daeun@example.com", "join_date": "2024-05-12", "last_login": "2026-06-27", "status": "active", "questions": 6},
-    {"id": 6, "name": "한승호", "email": "seungho@example.com", "join_date": "2024-06-01", "last_login": "2026-04-10", "status": "suspended", "questions": 1},
-    {"id": 7, "name": "오미래", "email": "mirae@example.com", "join_date": "2024-06-15", "last_login": "2026-06-30", "status": "active", "questions": 15},
-    {"id": 8, "name": "임태양", "email": "taeyang@example.com", "join_date": "2024-07-20", "last_login": "2026-06-25", "status": "active", "questions": 9},
-]
-
-FAQ_DATA = [
-    {"name": "임금체불", "count": 342},
-    {"name": "부당해고", "count": 287},
-    {"name": "퇴직금", "count": 198},
-    {"name": "연차휴가", "count": 156},
-    {"name": "최저임금", "count": 134},
-    {"name": "직장내괴롭힘", "count": 98},
-    {"name": "산업재해", "count": 76},
-]
-
-CATEGORY_PIE = [
-    {"name": "임금체불", "value": 28},
-    {"name": "부당해고", "value": 23},
-    {"name": "퇴직금", "value": 16},
-    {"name": "연차휴가", "value": 13},
-    {"name": "최저임금", "value": 11},
-    {"name": "기타", "value": 9},
-]
-
-CATEGORY_TRENDS = [
-    {"name": "임금체불", "change": 8},
-    {"name": "부당해고", "change": -3},
-    {"name": "연차휴가", "change": 0},
-    {"name": "산업재해", "change": 5},
-    {"name": "근로계약", "change": -2},
-]
-
-DAILY_DATA = [
-    {"date": "6/25", "questions": 47, "users": 12},
-    {"date": "6/26", "questions": 52, "users": 15},
-    {"date": "6/27", "questions": 61, "users": 18},
-    {"date": "6/28", "questions": 58, "users": 14},
-    {"date": "6/29", "questions": 73, "users": 21},
-    {"date": "6/30", "questions": 84, "users": 27},
-    {"date": "7/1", "questions": 38, "users": 9},
-]
-
+from .mock_data import MOCK_USERS, MOCK_QUESTIONS, CATEGORY_TRENDS, CATEGORY_PIE, DAILY_DATA, PROMPT_TEMPLATES
 from chat.models import ChatHistory
 
 
@@ -91,76 +44,118 @@ def users_context() -> dict:
     active_count = sum(1 for user in MOCK_USERS if user["status"] == "active")
     return {"users": MOCK_USERS, "active_count": active_count, "suspended_count": len(MOCK_USERS) - active_count}
 
+from collections import defaultdict
+from datetime import datetime
+
+LOW_SCORE_THRESHOLD = 60  # 평균 만족도 60% 미만이면 "개선 필요"
+
+def _safe_int(value, default=0):
+    """좋아요/싫어요 값이 없거나 숫자가 아니면 0으로 처리 (요구사항: 값 누락 시 False 취급과 동일한 효과)."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+ 
+ 
+def _score(likes, dislikes):
+    total = likes + dislikes
+    if total == 0:
+        return 0
+    return round(likes / total * 100)
+ 
+ 
+def _short_date(raw_date):
+    """'2026-06-30 14:23' -> '06-30'. 날짜가 없거나 형식이 다르면 None을 반환해 차트 집계에서 제외."""
+    if not raw_date:
+        return None
+    try:
+        return datetime.strptime(raw_date[:10], "%Y-%m-%d").strftime("%m-%d")
+    except ValueError:
+        return None
+ 
+ 
 def feedback_context() -> dict:
-    from collections import defaultdict
-
-    feedback_qs = ChatHistory.objects.filter(feedback__isnull=False)
-    total_likes = feedback_qs.filter(feedback=True).count()
-    total_dislikes = feedback_qs.filter(feedback=False).count()
-    total_votes = total_likes + total_dislikes
-    avg_score = round(total_likes / total_votes * 100, 1) if total_votes > 0 else 0
-
-    # Group by mode (rag, calculator, etc.) as category
-    records = list(feedback_qs.values("mode", "feedback", "created_at"))
-    grouped: dict[str, list] = {}
-    for r in records:
-        cat = r["mode"] or "rag"
-        grouped.setdefault(cat, []).append(r)
-
-    category_groups = []
-    for category, items in grouped.items():
-        likes = sum(1 for i in items if i["feedback"] is True)
-        dislikes = sum(1 for i in items if i["feedback"] is False)
-        total = likes + dislikes
-        score = round(likes / total * 100) if total > 0 else 0
-
-        by_date: dict[str, dict] = defaultdict(lambda: {"likes": 0, "dislikes": 0})
-        for i in items:
-            date_key = i["created_at"].strftime("%m-%d") if i["created_at"] else "unknown"
-            if i["feedback"] is True:
-                by_date[date_key]["likes"] += 1
-            elif i["feedback"] is False:
-                by_date[date_key]["dislikes"] += 1
-
-        sorted_dates = sorted(by_date.keys())
-        day_totals = {d: by_date[d]["likes"] + by_date[d]["dislikes"] for d in sorted_dates}
-        max_day_total = max(day_totals.values(), default=1) or 1
-
-        daily_trend = []
-        for date in sorted_dates:
-            likes_n = by_date[date]["likes"]
-            dislikes_n = by_date[date]["dislikes"]
-            daily_trend.append({
+    by_category = defaultdict(lambda: {
+        "likes": 0, "dislikes": 0, "items": [],
+        "daily": defaultdict(lambda: {"likes": 0, "dislikes": 0}),
+    })
+ 
+    total_likes = 0
+    total_dislikes = 0
+ 
+    for raw in MOCK_QUESTIONS:
+        category = raw.get("category") or "미분류"  # 카테고리 누락 -> "미분류"
+        likes = _safe_int(raw.get("likes"))
+        dislikes = _safe_int(raw.get("dislikes"))
+ 
+        total_likes += likes
+        total_dislikes += dislikes
+ 
+        bucket = by_category[category]
+        bucket["likes"] += likes
+        bucket["dislikes"] += dislikes
+        bucket["items"].append(raw)
+ 
+        date_key = _short_date(raw.get("date"))
+        if date_key:  # 날짜 없으면 일별 차트 집계에서만 제외, 요약 통계에는 포함
+            bucket["daily"][date_key]["likes"] += likes
+            bucket["daily"][date_key]["dislikes"] += dislikes
+ 
+    score_ranking = []
+ 
+    for category, bucket in by_category.items():
+        avg_score = _score(bucket["likes"], bucket["dislikes"])
+        needs_attention = avg_score < LOW_SCORE_THRESHOLD
+ 
+        low_count = sum(
+            1 for item in bucket["items"]
+            if _score(_safe_int(item.get("likes")), _safe_int(item.get("dislikes"))) < LOW_SCORE_THRESHOLD
+        )
+ 
+        daily_items = sorted(bucket["daily"].items())  # 날짜 오름차순
+        max_count = max(
+            [v["likes"] for _, v in daily_items] + [v["dislikes"] for _, v in daily_items] + [1]
+        )
+        daily_trend = [
+            {
                 "date": date,
-                "likes": likes_n,
-                "dislikes": dislikes_n,
-                "like_height": round(likes_n / max_day_total * 100),
-                "dislike_height": round(dislikes_n / max_day_total * 100),
-            })
-
-        category_groups.append({
+                "likes": v["likes"],
+                "dislikes": v["dislikes"],
+                "like_height": round(v["likes"] / max_count * 100),
+                "dislike_height": round(v["dislikes"] / max_count * 100),
+            }
+            for date, v in daily_items
+        ]
+ 
+        score_ranking.append({
             "category": category,
-            "likes": likes,
-            "dislikes": dislikes,
-            "low_count": dislikes,
-            "avg_score": score,
-            "needs_attention": score < 60,
+            "avg_score": avg_score,
+            "likes": bucket["likes"],
+            "dislikes": bucket["dislikes"],
+            "needs_attention": needs_attention,
+            "low_count": low_count,
             "daily_trend": daily_trend,
         })
-
-    category_groups.sort(key=lambda g: g["avg_score"])
-    for rank, group in enumerate(category_groups, start=1):
-        group["rank"] = rank
-
+ 
+    # 만족도 낮은 순 정렬(개선 우선순위) + 순위 부여
+    score_ranking.sort(key=lambda x: x["avg_score"])
+    for i, entry in enumerate(score_ranking, start=1):
+        entry["rank"] = i
+ 
+    # 카테고리 아코디언 목록도 동일 순서(낮은 만족도 우선) 사용
+    category_groups = score_ranking
+ 
+    low_category_count = sum(1 for e in category_groups if e["needs_attention"])
+    # 개선 대상 없음 -> "개선 필요 (0)"으로 정상 표시 (low_category_count = 0)
+ 
     return {
+        "total_likes": total_likes,
+        "total_dislikes": total_dislikes,
+        "avg_score": _score(total_likes, total_dislikes),  # 피드백 데이터 없으면 0
+        "score_ranking": score_ranking,
         "category_groups": category_groups,
-        "score_ranking": category_groups,
-        "low_category_count": sum(1 for g in category_groups if g["needs_attention"]),
-        "total_likes": f"{total_likes:,}",
-        "total_dislikes": f"{total_dislikes:,}",
-        "avg_score": f"{avg_score:.1f}%",
+        "low_category_count": low_category_count,
     }
-
 
 def vectordb_context() -> dict:
     return {
@@ -201,58 +196,22 @@ def performance_context() -> dict:
     }
     
     
-## 프롬프트 더미
-_PROMPT_TEMPLATES = {
-    "answer_prompt": {
-        "id": "answer_prompt",
-        "name": "answer_prompt",
-        "description": "AI 상담 답변 생성 프롬프트",
-        "version": 3,
-        "content": "당신은 노동법 전문 AI입니다. 아래 컨텍스트를 반드시 참고하여 정확하게 답변하세요.\n질문: {question}\n컨텍스트: {context}",
-        "placeholders": ["{question}", "{context}"],
-        "updated_at": "2026-06-28 14:20",
-        "updated_by": "관리자",
-        "history": [
-            {
-                "version": 3,
-                "updated_at": "2026-06-28 14:20",
-                "updated_by": "관리자",
-                "summary": "컨텍스트 강조 문구 추가",
-                "content": "당신은 노동법 전문 AI입니다. 아래 컨텍스트를 반드시 참고하여 정확하게 답변하세요.\n질문: {question}\n컨텍스트: {context}",
-            },
-            {
-                "version": 2,
-                "updated_at": "2026-06-20 09:10",
-                "updated_by": "관리자",
-                "summary": "초기 버전 개선",
-                "content": "당신은 노동법 전문 AI입니다.\n질문: {question}\n컨텍스트: {context}",
-            },
-            {
-                "version": 1,
-                "updated_at": "2026-06-10 11:00",
-                "updated_by": "관리자",
-                "summary": "최초 등록",
-                "content": "노동법 관련 질문에 답변하세요.\n질문: {question}",
-            },
-        ],
-    },
-}
 
 def prompts_context() -> dict:
-    return {"prompt_templates": list(_PROMPT_TEMPLATES.values())}
+    return {"prompt_templates": list(PROMPT_TEMPLATES.values())}
 
 
 def get_prompt_template(template_id: str) -> dict:
-    return _PROMPT_TEMPLATES.get(template_id, {})
+    return PROMPT_TEMPLATES.get(template_id, {})
 
 
 def validate_prompt_content(template_id: str, content: str) -> list[str]:
-    template = _PROMPT_TEMPLATES.get(template_id, {})
+    template = PROMPT_TEMPLATES.get(template_id, {})
     return [f"필수 플레이스홀더 {p} 가 누락되었습니다." for p in template.get("placeholders", []) if p not in content]
 
 
 def save_prompt_template(template_id: str, content: str) -> None:
-    template = _PROMPT_TEMPLATES.get(template_id)
+    template = PROMPT_TEMPLATES.get(template_id)
     if not template:
         return
     new_version = template["version"] + 1
@@ -268,7 +227,7 @@ def save_prompt_template(template_id: str, content: str) -> None:
     template["updated_at"] = "2026-07-02 17:30"
 
 def rollback_prompt_template(template_id: str, version) -> None:
-    template = _PROMPT_TEMPLATES.get(template_id)
+    template = PROMPT_TEMPLATES.get(template_id)
     if not template:
         return
     match = next((v for v in template["history"] if str(v["version"]) == str(version)), None)
