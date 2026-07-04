@@ -7,9 +7,16 @@
     <div data-tab-panel="history" class="stack-list">
         {% for item in history %}
             <article class="list-card"><span>{{ item.category }}</span><strong>{{ item.q }}</strong><time>{{ item.date }}</time></article>
+        {% empty %}
+            <p class="empty-state">상담 이력이 없습니다.</p>
         {% endfor %}
     </div>
     <div data-tab-panel="profile" class="profile-card" hidden>
-        <dl><dt>이름</dt><dd>{{ user.name }}</dd><dt>이메일</dt><dd>{{ user.email }}</dd><dt>가입일</dt><dd>2024-01-15</dd><dt>총 상담 횟수</dt><dd>{{ history_count }}회</dd></dl>
+        <dl>
+            <dt>이름</dt><dd>{{ user.name|default:"-" }}</dd>
+            <dt>이메일</dt><dd>{{ user.email|default:"-" }}</dd>
+            <dt>가입일</dt><dd>{{ user.join_date|default:"-" }}</dd>
+            <dt>총 상담 횟수</dt><dd>{{ history_count|default:0 }}회</dd>
+        </dl>
     </div>
 </section>
