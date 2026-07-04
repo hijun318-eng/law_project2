@@ -1,37 +1,48 @@
-<section class="admin-page">
+<section class="admin-page" data-perf-period>
     <div class="page-head">
-        <div><h1>성능 모니터링</h1><p>LangGraph 파이프라인 및 LLM/임베딩 API 호출 현황 (최근 30일)</p></div>
+        <div>
+            <h1>성능 모니터링</h1>
+            <p>LangGraph 파이프라인 및 LLM/임베딩 API 호출 현황</p>
+        </div>
+    </div>
+
+    <div id="perfStatus" class="perf-status" role="status" hidden>
+        <span class="perf-status-text"></span>
+        <button type="button" class="perf-retry-btn" hidden>다시 시도</button>
     </div>
 
     <h2 class="perf-section-title">LangGraph 노드 처리 시간</h2>
-    <div class="stat-grid">
+    <div class="stat-grid" id="perfNodeGrid">
         {% for node in langgraph_nodes %}
         <article class="stat-card blue">
-            <p style="font-weight:700; color:var(--ink); margin-top:6px;">{{ node.label }}</p>
+            <p class="node-label" style="font-weight:700; color:var(--ink); margin-top:6px;">{{ node.label }}</p>
+            <p class="card-meta">{{ node.calls }}회 호출</p>
             <div class="split-row"><span>평균</span><b>{{ node.avg_ms }}ms</b></div>
             <div class="split-row"><span>최대</span><b class="bad">{{ node.max_ms }}ms</b></div>
         </article>
+        {% empty %}
+        <p class="perf-empty">표시할 노드 데이터가 없습니다.</p>
         {% endfor %}
     </div>
 
     <div class="page-head">
-        <h2 class="perf-section-titlel" style="margin:0;">LLM · 임베딩 API 사용량</h2>
-        <div class="segmented" style="width:auto;" data-perf-period>
-            <button class="active" type="button" data-period="day">일</button>
-            <button type="button" data-period="week">주</button>
-            <button type="button" data-period="month">월</button>
+        <h2 class="perf-section-title" style="margin:0;">LLM · 임베딩 API 사용량</h2>
+        <div class="segmented" style="width:auto;" data-perf-toggle>
+            <button class="active" type="button" data-period="day" title="최근 30일, 일 단위">일</button>
+            <button type="button" data-period="week" title="최근 12주, 주 단위">주</button>
+            <button type="button" data-period="month" title="최근 12개월, 월 단위">월</button>
         </div>
     </div>
 
-    <div class="stat-grid three">
+    <div class="stat-grid three" id="perfStatGrid">
         <article class="stat-card blue"><strong>{{ total_calls }}</strong><p>총 LLM 호출</p></article>
         <article class="stat-card purple"><strong>{{ total_tokens }}</strong><p>총 토큰 사용량</p></article>
-        <article class="stat-card green"><strong>${{ total_cost }}</strong><p>예상 총 비용 (7일 기준)</p></article>
+        <article class="stat-card green"><strong>${{ total_cost }}</strong><p>예상 총 비용</p></article>
     </div>
 
     <div class="admin-grid">
         <article class="panel wide">
-            <h2>API 호출 수</h2>
+            <h2>API 호출 수 <small class="perf-range-label" id="perfRangeLabel">(최근 30일)</small></h2>
             <div class="bar-chart" id="perfCallsChart">
                 {% for item in llm_usage %}
                 <div>
@@ -39,14 +50,20 @@
                     <span class="bar u" style="height: {{ item.emb_calls_height }}%"></span>
                     <small>{{ item.date }}</small>
                 </div>
+                {% empty %}
+                <p class="perf-empty">표시할 호출 데이터가 없습니다.</p>
                 {% endfor %}
             </div>
         </article>
         <article class="panel">
             <h2>병목 노드 TOP</h2>
-            {% for node in langgraph_nodes %}
-            <div class="bottleneck-row"><span>{{ node.label }}</span><i style="width: {{ node.load_percent }}%"></i><b>{{ node.calls }}</b></div>
-            {% endfor %}
+            <div id="perfBottleneck">
+                {% for node in langgraph_nodes %}
+                <div class="bottleneck-row"><span>{{ node.label }}</span><i style="width: {{ node.load_percent }}%"></i><b>{{ node.calls }}</b></div>
+                {% empty %}
+                <p class="perf-empty">표시할 병목 데이터가 없습니다.</p>
+                {% endfor %}
+            </div>
         </article>
     </div>
 </section>
