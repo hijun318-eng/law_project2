@@ -1,6 +1,12 @@
 <section class="admin-page">
     <div class="page-head"><div><h1>관리자 대시보드</h1><p>2026년 7월 1일 기준</p></div><button class="secondary-button">새로고침</button></div>
-    <div class="stat-grid">{% for stat in stats %}<article class="stat-card {{ stat.tone }}"><span>{{ stat.change }}</span><strong>{{ stat.value }}</strong><p>{{ stat.label }}</p></article>{% endfor %}</div>
+    <div class="stat-grid">
+        {% for stat in stats %}
+        <article class="stat-card {{ stat.tone }}"><span>{{ stat.change }}</span><strong>{{ stat.value }}</strong><p>{{ stat.label }}</p></article>
+        {% empty %}
+        <p class="empty-state">표시할 통계가 없습니다.</p>
+        {% endfor %}
+    </div>
 
     <div class="admin-grid">
         <article class="panel wide">
@@ -16,6 +22,8 @@
                     <span class="bar u" style="height: {{ item.user_height }}%"></span>
                     <small>{{ item.date }}</small>
                 </div>
+                {% empty %}
+                <p class="empty-state">표시할 일별 데이터가 없습니다.</p>
                 {% endfor %}
             </div>
         </article>
@@ -31,6 +39,8 @@
                 <ul class="donut-legend">
                     {% for item in categories %}
                         <li><span class="legend-dot" data-dot="{{ forloop.counter0 }}"></span>{{ item.name }}<b>{{ item.value }}%</b></li>
+                    {% empty %}
+                        <li class="empty-state">표시할 카테고리 데이터가 없습니다.</li>
                     {% endfor %}
                 </ul>
             </div>
@@ -54,6 +64,8 @@
                     </div>
                     <b class="trend-value trend-{{ item.direction }}">{{ item.change_display }}</b>
                 </div>
+                {% empty %}
+                <p class="empty-state">표시할 증감 추이 데이터가 없습니다.</p>
                 {% endfor %}
             </div>
         </article>
@@ -77,6 +89,8 @@
             </div>
             {% for item in low_feedback %}
                 <div class="split-row"><span>{{ item.category }}</span><b class="bad">{{ item.avg_score }}%</b></div>
+            {% empty %}
+                <p class="empty-state">낮은 평가 답변이 없습니다.</p>
             {% endfor %}
         </article>
     </div>
