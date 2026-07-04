@@ -393,7 +393,7 @@ td small { display: block; color: var(--muted); margin-top: 3px; }
 .status { padding: 5px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; }
 .status.active { background: #ecfdf5; color: var(--green); }
 .status.suspended { background: #fff1f2; color: var(--red); }
-.mini-button { background: #fff; color: var(--primary); border: 1px solid #bfdbfe; font-size: 12px; }
+.mini-button { background: #fff; color: var(--primary); border: 1px solid #cda864; font-size: 12px; }
 .feedback-card { padding: 18px; }
 .feedback-card.low { border-color: #fecdd3; }
 .feedback-card header { display: flex; gap: 8px; align-items: center; }
