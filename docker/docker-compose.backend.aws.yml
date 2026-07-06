@@ -11,7 +11,7 @@ services:
       - DJANGO_SETTINGS_MODULE=backend.settings
       - DEBUG=False
     volumes:
-      - ../vector_db:/app/vector_db:ro
+      - ../vector_db:/app/vector_db
       - ../data:/app/data:ro
     restart: unless-stopped
     command:
