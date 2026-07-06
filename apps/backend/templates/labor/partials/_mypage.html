@@ -1,4 +1,4 @@
-<section class="content-narrow">
+<section class="content-narrow" data-mypage>
     <h1>마이페이지</h1>
     <div class="tabs" data-tabs>
         <button class="active" type="button" data-tab="history">상담 이력</button>
@@ -6,7 +6,25 @@
     </div>
     <div data-tab-panel="history" class="stack-list">
         {% for item in history %}
-            <article class="list-card"><span>{{ item.category }}</span><strong>{{ item.q }}</strong><time>{{ item.date }}</time></article>
+            <article class="list-card mypage-card" data-history-id="{{ item.id }}" data-history-api="{% url 'history_detail_api' item.id %}">
+                <div class="mypage-card-head">
+                    <span class="mypage-card-badge">{{ item.category }}</span>
+                    <strong class="mypage-card-question">{{ item.q }}</strong>
+                    <div class="mypage-card-meta">
+                        <time>{{ item.date }}</time>
+                        <span class="message-actions" data-feedback="{{ item.feedback }}">
+                            <button type="button"{% if item.feedback == True %} class="active"{% endif %} data-action="feedback_like" data-mid="{{ item.id }}">{% if item.feedback == True %}✓ {% endif %}도움됐어요</button>
+                            <button type="button"{% if item.feedback == False %} class="active"{% endif %} data-action="feedback_dislike" data-mid="{{ item.id }}">{% if item.feedback == False %}✓ {% endif %}아쉬워요</button>
+                        </span>
+                    </div>
+                </div>
+                <div class="mypage-card-body" hidden>
+                    <div class="chat-window mypage-chat">
+                        <div class="message user"></div>
+                        <div class="message ai"></div>
+                    </div>
+                </div>
+            </article>
         {% empty %}
             <p class="empty-state">상담 이력이 없습니다.</p>
         {% endfor %}
