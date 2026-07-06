@@ -446,6 +446,40 @@ td small { display: block; color: var(--muted); margin-top: 3px; }
 
 
 
+/* ===== 마이페이지 ===== */
+.mypage-card { cursor: pointer; transition: box-shadow .15s; }
+.mypage-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.mypage-card.open { border-color: var(--primary); }
+.mypage-card-head { display: grid; gap: 6px; }
+.mypage-card-badge {
+    padding: 3px 8px; border-radius: 6px;
+    background: var(--primary-soft); color: var(--primary-dark);
+    font-size: 12px; font-weight: 800; justify-self: start;
+}
+.mypage-card-question {
+    font-size: 15px; font-weight: 600; color: #111827;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; line-height: 1.5;
+}
+.mypage-card-meta {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-top: 4px;
+}
+.mypage-card-meta time { color: var(--muted); font-size: 12px; }
+.mypage-card-meta .message-actions { margin: 0 0 0 auto; padding: 0; border: 0; }
+.mypage-card-meta .message-actions button { background: transparent; }
+.mypage-card-body { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 14px; }
+.mypage-chat { max-height: 400px; overflow-y: auto; padding: 0; background: transparent; }
+.mypage-chat .message { max-width: 100%; padding: 12px 14px; margin-bottom: 8px; }
+.mypage-chat .message.user {
+    background: var(--primary-soft); color: #111827;
+    border-radius: 8px 8px 2px 8px; align-self: flex-end;
+}
+.mypage-chat .message.ai {
+    background: #f3f4f6; color: #111827;
+    border-radius: 8px 8px 8px 2px; align-self: flex-start;
+}
+
 @media (max-width: 900px) {
     .feature-grid, .stat-grid, .stat-grid.three, .admin-grid { grid-template-columns: 1fr; }
     .landing-stats { grid-template-columns: 1fr; }

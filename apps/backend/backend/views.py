@@ -91,6 +91,7 @@ def login_view(request):
                 "name": user.first_name,
                 "email": user.username,
                 "role": "admin" if user.is_staff else "user",
+                "join_date": user.date_joined.strftime("%Y-%m-%d"),
             }
             return redirect("admin_console") if user.is_staff else redirect("landing")
 
@@ -142,6 +143,7 @@ def register_view(request):
             "name": user.first_name,
             "email": user.username,
             "role": "user",
+            "join_date": user.date_joined.strftime("%Y-%m-%d"),
         }
         return redirect("landing")
 
@@ -158,6 +160,13 @@ def user_app(request):
     user = _current_user(request)
     if not user:
         return redirect("login")
+    # 세션에 가입일이 없으면 DB에서 조회 (기존 로그인 사용자 대응)
+    if "join_date" not in user:
+        try:
+            db_user = User.objects.get(username=user["email"])
+            user["join_date"] = db_user.date_joined.strftime("%Y-%m-%d")
+        except User.DoesNotExist:
+            pass
     page = request.GET.get("page", "home")
     if page not in {"home", "calculator", "news", "mypage"}:
         page = "home"
@@ -190,7 +199,13 @@ def user_app(request):
             "news_items": news_items,
             "news_summary": news_summary_text,
             "history": [
-                {"q": h.question, "date": h.created_at.strftime("%Y-%m-%d"), "category": h.mode or "rag"}
+                {
+                    "id": h.id,
+                    "q": h.question,
+                    "date": h.created_at.strftime("%Y-%m-%d"),
+                    "category": h.mode or "rag",
+                    "feedback": h.feedback,
+                }
                 for h in ChatHistory.objects.filter(user__first_name=user["name"]).order_by("-created_at")[:20]
             ],
             "history_count": ChatHistory.objects.filter(user__first_name=user["name"]).count(),
@@ -397,6 +412,23 @@ def calculate_api(request):
         )
         message = f"{result.label}은 {calculator.format_won(result.amount)}입니다."
     return JsonResponse({"message": message, "result": result.to_dict() if result else None})
+
+
+def history_detail_api(request, history_id):
+    try:
+        chat = ChatHistory.objects.get(pk=history_id)
+    except ChatHistory.DoesNotExist:
+        return JsonResponse({"error": "not found"}, status=404)
+
+    return JsonResponse({
+        "id": chat.id,
+        "question": chat.question,
+        "answer": chat.answer,
+        "mode": chat.mode,
+        "feedback": chat.feedback,
+        "sources": chat.sources,
+        "created_at": chat.created_at.isoformat(),
+    })
 
 
 def news_api(request):
