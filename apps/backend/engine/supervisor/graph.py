@@ -17,7 +17,7 @@ from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from engine.config import llm
-from engine.rag_engine import RAGEngine
+from engine.router_engine import router_engine
 from engine.calculator_engine import CalculatorEngine
 from engine.tools.news_search_tool import NewsSearchTool
 from engine.utils.execution_logger import log_node
@@ -158,8 +158,6 @@ def supervisor_node(state: SupervisorState) -> dict:
 @log_node
 def rag_router_node(state: SupervisorState) -> dict:
     """RAG 엔진 실행 — 법률/판례 검색 및 답변 생성"""
-    engine = RAGEngine()
-
     question = state["question"]
 
     # 이전에 계산 결과가 있으면 질문에 포함시켜 RAG가 활용하게 함
@@ -173,19 +171,16 @@ def rag_router_node(state: SupervisorState) -> dict:
             f"위 계산 결과를 참고하여 법률 답변을 생성해주세요."
         )
 
-    result = engine.answer(question)
-    procedure = result.get("procedure", "")
-    if procedure == "skip":
-        procedure = ""
+    result = router_engine.run(question)
     return {
         "intermediate_results": {
             **state.get("intermediate_results", {}),
-            "rag": result.get("answer", ""),
+            "rag": result.content,
         },
-        "rag_sources": result.get("sources", []),
+        "rag_sources": [],
         "log": "법률 답변 생성 완료",
         "iteration": state.get("iteration", 0) + 1,
-        "rag_procedure": procedure,
+        "rag_procedure": "",
     }
 
 

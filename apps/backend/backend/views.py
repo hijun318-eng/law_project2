@@ -7,7 +7,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
 from .services import calculator, dashboard
-from engine.router_engine import router_engine
+from engine.supervisor.engine import SupervisorEngine
 from engine.tools.news_search_tool import NewsSearchTool
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
@@ -16,6 +16,7 @@ from chat.models import ChatHistory
 from engine.utils.execution_logger import clear_logger, get_logger, init_logger
 
 news_search_tool = NewsSearchTool()
+supervisor_engine = SupervisorEngine()
 
 # advice.py quick_questions() → 인라인 상수
 _QUICK_QUESTIONS = [
@@ -336,9 +337,9 @@ def advice_api(request):
     answer = ""
     try:
         init_logger(question)
-        result = router_engine.run(question)
-        answer = result.content
-        chat.mode = result.mode
+        result = supervisor_engine.answer(question)
+        answer = result.get("answer", "")
+        chat.mode = "supervisor"
     except Exception as e:
         answer = f"오류 발생: {str(e)}"
     finally:
