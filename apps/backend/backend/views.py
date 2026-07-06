@@ -189,7 +189,13 @@ def user_app(request):
             "news_items": news_items,
             "news_summary": news_summary_text,
             "history": [
-                {"q": h.question, "date": h.created_at.strftime("%Y-%m-%d"), "category": h.mode or "rag"}
+                {
+                    "id": h.id,
+                    "q": h.question,
+                    "date": h.created_at.strftime("%Y-%m-%d"),
+                    "category": h.mode or "rag",
+                    "feedback": h.feedback,
+                }
                 for h in ChatHistory.objects.filter(user__first_name=user["name"]).order_by("-created_at")[:20]
             ],
             "history_count": ChatHistory.objects.filter(user__first_name=user["name"]).count(),
@@ -388,6 +394,23 @@ def calculate_api(request):
         )
         message = f"{result.label}은 {calculator.format_won(result.amount)}입니다."
     return JsonResponse({"message": message, "result": result.to_dict() if result else None})
+
+
+def history_detail_api(request, history_id):
+    try:
+        chat = ChatHistory.objects.get(pk=history_id)
+    except ChatHistory.DoesNotExist:
+        return JsonResponse({"error": "not found"}, status=404)
+
+    return JsonResponse({
+        "id": chat.id,
+        "question": chat.question,
+        "answer": chat.answer,
+        "mode": chat.mode,
+        "feedback": chat.feedback,
+        "sources": chat.sources,
+        "created_at": chat.created_at.isoformat(),
+    })
 
 
 def news_api(request):
