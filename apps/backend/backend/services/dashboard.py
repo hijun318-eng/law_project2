@@ -186,9 +186,14 @@ def _calculate_total_cost(price_configs: dict) -> float:
     """PriceConfig 딕셔너리를 받아 LLMUsageLog의 실제 사용량으로 비용 계산."""
     total = 0.0
     for model_name, price in price_configs.items():
-        usages = LLMUsageLog.objects.filter(model=model_name).values('call_type').annotate(
-            total_prompt=Sum('prompt_tokens'),
-            total_completion=Sum('completion_tokens'),
+        usages = (
+            LLMUsageLog.objects.filter(model=model_name)
+            .exclude(node_name='test')
+            .values('call_type')
+            .annotate(
+                total_prompt=Sum('prompt_tokens'),
+                total_completion=Sum('completion_tokens'),
+            )
         )
         for u in usages:
             prompt_tokens = u['total_prompt'] or 0
@@ -204,6 +209,7 @@ def _get_period_usage(period: str = 'day') -> list:
     trunc_fn = trunc_map.get(period, TruncDay)
     qs = (
         LLMUsageLog.objects
+        .exclude(node_name='test')
         .annotate(period_date=trunc_fn('created_at'))
         .values('period_date')
         .annotate(
@@ -275,8 +281,8 @@ def performance_context() -> dict:
         for n in nodes_agg
     ]
 
-    # LLM 사용량 통계
-    llm_agg = LLMUsageLog.objects.aggregate(
+    # LLM 사용량 통계 (test 노드 제외)
+    llm_agg = LLMUsageLog.objects.exclude(node_name='test').aggregate(
         total_calls=Count('id'),
         total_tokens=Sum('total_tokens'),
     )
@@ -295,7 +301,7 @@ def performance_context() -> dict:
         "llm_usage": [],
         "total_calls": total_calls,
         "total_tokens": f"{total_tokens:,}",
-        "total_cost": f"{total_cost:.2f}",
+        "total_cost": total_cost,
         "slow_queries": slow_queries,
     }
 
