@@ -1,4 +1,15 @@
-import { postJson, appendMessage } from "./utils.js";
+import { postJson, appendMessage, escapeHtml } from "./utils.js";
+
+function renderLawSources(sources) {
+    if (!sources || sources.length === 0) {
+        return `<p class="empty-state">이 답변에 참고한 법령 원문이 없습니다.</p>`;
+    }
+    return sources.map((src) => {
+        const heading = [src.law_name, src.article_no].filter(Boolean).join(" ")
+            + (src.article_title ? ` (${src.article_title})` : "");
+        return `<article><strong>${escapeHtml(heading)}</strong><p>${escapeHtml(src.page_content || "")}</p></article>`;
+    }).join("");
+}
 
 export function initAdvice() {
     const adviceSection = document.querySelector("[data-advice-api]");
@@ -9,6 +20,18 @@ export function initAdvice() {
     const messages = document.querySelector("#adviceMessages");
     const quick = document.querySelector("[data-quick-questions]");
     const drawer = document.querySelector("#lawDrawer");
+    const drawerBody = document.querySelector("[data-law-drawer-body]");
+    const historyApiBase = adviceSection.dataset.adviceHistoryApi?.replace(/0\/?$/, "");
+
+    const openLawDrawer = (messageId) => {
+        if (!drawerBody) return;
+        drawerBody.innerHTML = `<p class="empty-state">불러오는 중...</p>`;
+        drawer.hidden = false;
+        fetch(`${historyApiBase}${messageId}/`)
+            .then((response) => response.json())
+            .then((data) => { drawerBody.innerHTML = renderLawSources(data.sources); })
+            .catch(() => { drawerBody.innerHTML = `<p class="empty-state">법령 원문을 불러오지 못했습니다.</p>`; });
+    };
 
     const send = (text) => {
         const question = text.trim();
@@ -32,8 +55,8 @@ export function initAdvice() {
         input.value = "";
     });
     messages?.addEventListener("click", (event) => {
-        const drawerBtn = event.target.closest("[data-open-drawer]");
-        if (drawerBtn) { drawer.hidden = false; return; }
+        const drawerBtn = event.target.closest("[data-action='open-drawer']");
+        if (drawerBtn) { openLawDrawer(drawerBtn.dataset.mid); return; }
 
         const fbBtn = event.target.closest("[data-action^='feedback_']");
         if (!fbBtn) return;

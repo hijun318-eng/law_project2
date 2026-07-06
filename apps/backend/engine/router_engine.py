@@ -12,7 +12,7 @@ engine/router_engine.py
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from engine.config import llm
 from engine.calculator_engine import CalculatorEngine
@@ -58,6 +58,7 @@ class RouterResult:
     mode: str
     content: str
     category: str = ""
+    sources: list = field(default_factory=list)
 
 
 class LawRouterEngine:
@@ -100,6 +101,11 @@ class LawRouterEngine:
             return ""
         return doc.metadata.get("category", "")
 
+    @staticmethod
+    def _extract_sources(state: dict) -> list:
+        """GraphState에서 답변 생성에 참고한 법령 원문(law_analysis)을 추출합니다."""
+        return state.get("law_analysis", [])
+
     def run(self, question: str, session_id: str | None = None) -> RouterResult:
         mode = self.route(question)
 
@@ -114,12 +120,14 @@ class LawRouterEngine:
             if mode == ROUTE_CASE_BASED_ANSWER:
                 state = graph_answer.invoke({"question": question})
                 category = self._extract_category(state)
-                result = RouterResult(mode=mode, content=state.get("final_answer", ""), category=category)
+                sources = self._extract_sources(state)
+                result = RouterResult(mode=mode, content=state.get("final_answer", ""), category=category, sources=sources)
 
             elif mode == ROUTE_PROCEDURE_GUIDANCE:
                 state = graph_procedure.invoke({"question": question})
                 category = self._extract_category(state)
-                result = RouterResult(mode=mode, content=state.get("procedure_guide", "skip"), category=category)
+                sources = self._extract_sources(state)
+                result = RouterResult(mode=mode, content=state.get("procedure_guide", "skip"), category=category, sources=sources)
 
             elif mode == ROUTE_ALLOWANCE_CALCULATOR:
                 engine = CalculatorEngine()
