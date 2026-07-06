@@ -203,7 +203,8 @@ def _short_date(raw_date):
  
  
 def feedback_context() -> dict:
-    # feedback이 있는 모든 레코드를 집계 (category가 비어 있으면 '미분류'로 묶어서 표시)
+    # feedback이 있는 모든 레코드를 집계. category가 빈 레코드도 상단 총계(총 좋아요/싫어요/평균 만족도)에는
+    # 포함하되, 카테고리별 카드 목록(score_ranking/category_groups)에는 노출하지 않는다.
     base_qs = ChatHistory.objects.filter(feedback__isnull=False)
 
     # 카테고리별 likes/dislikes 집계
@@ -245,13 +246,17 @@ def feedback_context() -> dict:
 
     for cat_row in cat_agg:
         raw_category = cat_row["category"]
-        category = raw_category or "미분류"
         likes = cat_row["likes"] or 0
         dislikes = cat_row["dislikes"] or 0
 
         total_likes += likes
         total_dislikes += dislikes
 
+        if not raw_category:
+            # category 없는 항목(예: allowance_calculator)은 총계에는 반영하되 카드로는 노출하지 않음
+            continue
+
+        category = raw_category
         avg_score = _score(likes, dislikes)
         needs_attention = avg_score < LOW_SCORE_THRESHOLD
 
