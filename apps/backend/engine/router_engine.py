@@ -170,7 +170,7 @@ class LawRouterEngine:
             return RouterResult(mode=mode, content=answer)
 
         if mode == ROUTE_PROCEDURE_GUIDANCE:
-            state = graph_procedure.invoke({"question": question})
+            state = graph_procedure.invoke({"question": question, "skip_rerank": True})
             return RouterResult(mode=mode, content=state.get("procedure_guide", "skip"))
 
         if mode == ROUTE_ALLOWANCE_CALCULATOR:

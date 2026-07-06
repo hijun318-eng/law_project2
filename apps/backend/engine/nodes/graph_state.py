@@ -19,3 +19,4 @@ class GraphState(TypedDict):
     final_answer: str
     used_precedents: list[str]
     procedure_guide: str
+    skip_rerank: bool
