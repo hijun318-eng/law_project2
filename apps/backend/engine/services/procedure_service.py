@@ -63,7 +63,7 @@ class ProcedureService:
         if logger:
             logger.record_llm_usage(
                 node_name="procedure_guide",
-                model="gpt-4o-mini",
+                model="gpt-5.4-nano",
                 call_type="llm",
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,

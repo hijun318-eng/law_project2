@@ -40,7 +40,7 @@ class AnswerService:
         if logger:
             logger.record_llm_usage(
                 node_name="generate_answer",
-                model="gpt-4o-mini",
+                model="gpt-5.4-nano",
                 call_type="llm",
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
