@@ -267,19 +267,10 @@ def admin_reprocess_failed(request):
 
 
 def admin_performance_data(request):
-    from .services.dashboard import performance_context
+    from .services.dashboard import performance_context, _get_period_usage
     data = performance_context()
     period = request.GET.get("period", "day")
-    if period == "week":
-        data["llm_usage"] = [
-            {"date": "06-23", "calls": 980, "calls_height": 85, "emb_calls_height": 50},
-            {"date": "06-24", "calls": 1050, "calls_height": 90, "emb_calls_height": 55},
-        ]
-    elif period == "month":
-        data["llm_usage"] = [
-            {"date": "06-01", "calls": 4200, "calls_height": 95, "emb_calls_height": 60},
-            {"date": "06-15", "calls": 3800, "calls_height": 85, "emb_calls_height": 50},
-        ]
+    data["llm_usage"] = _get_period_usage(period)
     return JsonResponse(data)
 
 

@@ -1,5 +1,8 @@
 from .mock_data import MOCK_USERS, MOCK_QUESTIONS, CATEGORY_TRENDS, CATEGORY_PIE, DAILY_DATA
 from chat.models import ChatHistory
+from django.db.models import Avg, Max, Count, Sum, Q
+from django.db.models.functions import TruncDay, TruncWeek, TruncMonth
+from monitoring.models import NodeExecutionLog, LLMUsageLog, PriceConfig
 from . import prompts
 
 
@@ -174,29 +177,129 @@ def vectordb_context() -> dict:
     }
 
 
+# ──────────────────────────────────────────────
+# performance_context 헬퍼 함수들
+# ──────────────────────────────────────────────
+
+
+def _calculate_total_cost(price_configs: dict) -> float:
+    """PriceConfig 딕셔너리를 받아 LLMUsageLog의 실제 사용량으로 비용 계산."""
+    total = 0.0
+    for model_name, price in price_configs.items():
+        usages = LLMUsageLog.objects.filter(model=model_name).values('call_type').annotate(
+            total_prompt=Sum('prompt_tokens'),
+            total_completion=Sum('completion_tokens'),
+        )
+        for u in usages:
+            prompt_tokens = u['total_prompt'] or 0
+            completion_tokens = u['total_completion'] or 0
+            total += prompt_tokens * price.prompt_token_price / 1_000_000
+            total += completion_tokens * price.completion_token_price / 1_000_000
+    return total
+
+
+def _get_period_usage(period: str = 'day') -> list:
+    """LLMUsageLog를 period(day/week/month) 단위로 집계해 차트용 리스트 반환."""
+    trunc_map = {'day': TruncDay, 'week': TruncWeek, 'month': TruncMonth}
+    trunc_fn = trunc_map.get(period, TruncDay)
+    qs = (
+        LLMUsageLog.objects
+        .annotate(period_date=trunc_fn('created_at'))
+        .values('period_date')
+        .annotate(
+            calls=Count('id'),
+            total_tokens=Sum('total_tokens'),
+        )
+        .order_by('period_date')
+    )
+    max_calls = max((row['calls'] for row in qs), default=1)
+    result = []
+    for row in qs:
+        date_str = row['period_date'].strftime('%m-%d') if row['period_date'] else ''
+        result.append({
+            "date": date_str,
+            "calls": row['calls'],
+            "calls_height": round(row['calls'] / max_calls * 100),
+            "emb_calls_height": 0,
+        })
+    return result
+
+
+def _get_slow_queries() -> list:
+    """elapsed_ms 총합이 10초를 초과하는 세션을 최대 5건 반환."""
+    slow_sessions = (
+        NodeExecutionLog.objects
+        .values('session_id')
+        .annotate(total_ms=Sum('elapsed_ms'))
+        .filter(total_ms__gte=10.0)
+        .order_by('-total_ms')[:5]
+    )
+    result = []
+    for row in slow_sessions:
+        total_sec = round(row['total_ms'], 1)
+        # bottleneck: 해당 세션에서 가장 오래 걸린 노드
+        bottleneck_row = (
+            NodeExecutionLog.objects
+            .filter(session_id=row['session_id'])
+            .order_by('-elapsed_ms')
+            .first()
+        )
+        bottleneck = bottleneck_row.node_name if bottleneck_row else 'unknown'
+        result.append({
+            "question": row['session_id'],
+            "user": "",
+            "duration_sec": total_sec,
+            "bottleneck": bottleneck,
+            "date": "",
+        })
+    return result
+
+
 def performance_context() -> dict:
-    nodes = [
-        {"id": "retrieve", "label": "retrieve_context", "avg_ms": 820, "max_ms": 2100, "calls": 4210, "load_percent": 60},
-        {"id": "rerank", "label": "cross_encoder_rerank", "avg_ms": 410, "max_ms": 1500, "calls": 4210, "load_percent": 30},
-        {"id": "generate_answer", "label": "generate_answer", "avg_ms": 3200, "max_ms": 9800, "calls": 4210, "load_percent": 90},
-        {"id": "postprocess", "label": "postprocess", "avg_ms": 120, "max_ms": 400, "calls": 4210, "load_percent": 10},
+    # LangGraph 노드별 통계
+    nodes_agg = NodeExecutionLog.objects.values('node_name').annotate(
+        avg_ms=Avg('elapsed_ms'),
+        max_ms=Max('elapsed_ms'),
+        calls=Count('id'),
+    )
+    total_calls_all = sum(n['calls'] for n in nodes_agg) or 1
+    langgraph_nodes = [
+        {
+            "id": n['node_name'],
+            "label": n['node_name'].replace('_', ' '),
+            "avg_ms": round(n['avg_ms'], 1) if n['avg_ms'] else 0,
+            "max_ms": round(n['max_ms'], 1) if n['max_ms'] else 0,
+            "calls": n['calls'],
+            "load_percent": round(n['calls'] / total_calls_all * 100),
+        }
+        for n in nodes_agg
     ]
-    llm_usage = [
-        {"date": "06-26", "calls": 210, "calls_height": 70, "emb_calls_height": 40},
-        {"date": "06-27", "calls": 180, "calls_height": 60, "emb_calls_height": 35},
-    ]
+
+    # LLM 사용량 통계
+    llm_agg = LLMUsageLog.objects.aggregate(
+        total_calls=Count('id'),
+        total_tokens=Sum('total_tokens'),
+    )
+    total_calls = llm_agg['total_calls'] or 0
+    total_tokens = llm_agg['total_tokens'] or 0
+
+    # 비용 계산 (PriceConfig 기반)
+    price_configs = {p.model_name: p for p in PriceConfig.objects.all()}
+    total_cost = _calculate_total_cost(price_configs)
+
+    # 느린 쿼리
+    slow_queries = _get_slow_queries()
+
     return {
-        "langgraph_nodes": nodes,
-        "llm_usage": llm_usage,
-        "total_calls": 413,
-        "total_tokens": "1,100K",
-        "total_cost": "34.64",
-        "slow_queries": [
-            {"question": "회사가 임금을 3개월째 안 줘요, 어떻게 해야 하나요?", "user": "kim***@example.com", "duration_sec": 24.1, "bottleneck": "generate_answer", "date": "2026-06-30 10:12"},
-        ],
+        "langgraph_nodes": langgraph_nodes,
+        "llm_usage": [],
+        "total_calls": total_calls,
+        "total_tokens": f"{total_tokens:,}",
+        "total_cost": f"{total_cost:.2f}",
+        "slow_queries": slow_queries,
     }
-    
-    
+
+
 
 def prompts_context() -> dict:
     return {"prompt_templates": prompts.list_prompt_templates()}
