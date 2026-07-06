@@ -56,8 +56,11 @@ export function initCalculator() {
         if (!text) return;
         appendMessage(messages, "user", text);
         postJson(calcSection.dataset.calcApi, { mode: "chat", text }).then((data) => {
-            const content = data.result ? renderResult(data.result) : escapeHtml(data.message);
-            appendMessage(messages, "ai", content, false, true);
+            if (data.result) {
+                appendMessage(messages, "ai", renderResult(data.result), false, true);
+            } else {
+                appendMessage(messages, "ai", data.message, false, false);
+            }
             input.value = "";
         });
     });
