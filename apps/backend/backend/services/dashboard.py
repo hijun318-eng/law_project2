@@ -1,6 +1,8 @@
-from django.contrib.auth.models import User
+from datetime import timedelta
 
-from .mock_data import MOCK_QUESTIONS, CATEGORY_TRENDS, CATEGORY_PIE, DAILY_DATA
+from django.contrib.auth.models import User
+from django.utils import timezone
+
 from chat.models import ChatHistory
 from django.db.models import Avg, Max, Count, Sum, Q
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth
@@ -8,20 +10,106 @@ from monitoring.models import NodeExecutionLog, LLMUsageLog, PriceConfig
 from . import prompts
 
 
-def dashboard_context() -> dict:
-    max_questions = max(item["questions"] for item in DAILY_DATA)
-    max_abs_change = max(abs(item["change"]) for item in CATEGORY_TRENDS) or 1
+def _pct_change_display(now_value: int, prev_value: int) -> str:
+    """이전 대비 증감률을 '+12%' 형태 문자열로 반환. 이전 값이 0이면 신규 발생 여부로 판단."""
+    if prev_value == 0:
+        return "+100%" if now_value > 0 else "±0%"
+    pct = round((now_value - prev_value) / prev_value * 100)
+    return f"+{pct}%" if pct > 0 else (f"{pct}%" if pct < 0 else "±0%")
+
+
+def _daily_activity(days: int = 7) -> list[dict]:
+    """최근 N일간 일별 질문 수 / 활동 사용자 수(중복 제거)를 집계."""
+    today = timezone.localdate()
+    start = today - timedelta(days=days - 1)
+
+    rows = (
+        ChatHistory.objects
+        .filter(created_at__date__gte=start)
+        .annotate(day=TruncDay("created_at"))
+        .values("day")
+        .annotate(questions=Count("id"), users=Count("user", distinct=True))
+    )
+    by_date = {row["day"].date(): row for row in rows}
+
+    return [
+        {
+            "date": f"{(start + timedelta(days=i)).month}/{(start + timedelta(days=i)).day}",
+            "questions": by_date.get(start + timedelta(days=i), {}).get("questions", 0),
+            "users": by_date.get(start + timedelta(days=i), {}).get("users", 0),
+        }
+        for i in range(days)
+    ]
+
+
+def _category_distribution() -> list[dict]:
+    """category 값이 채워진 질문만 대상으로 비중(%)을 집계 (feedback_context와 동일 기준)."""
+    rows = (
+        ChatHistory.objects
+        .exclude(category__exact="")
+        .values("category")
+        .annotate(count=Count("id"))
+        .order_by("-count")
+    )
+    total = sum(row["count"] for row in rows)
+    if not total:
+        return []
+    return [{"name": row["category"], "value": round(row["count"] / total * 100)} for row in rows]
+
+
+def _category_share(start, end) -> dict[str, float]:
+    rows = (
+        ChatHistory.objects
+        .exclude(category__exact="")
+        .filter(created_at__date__gte=start, created_at__date__lte=end)
+        .values("category")
+        .annotate(count=Count("id"))
+    )
+    total = sum(row["count"] for row in rows)
+    if not total:
+        return {}
+    return {row["category"]: row["count"] / total * 100 for row in rows}
+
+
+def _category_trends(days: int = 7, top_n: int = 5) -> list[dict]:
+    """최근 N일 vs 그 이전 N일의 카테고리별 비중(%p) 변화."""
+    today = timezone.localdate()
+    now_start = today - timedelta(days=days - 1)
+    prev_end = now_start - timedelta(days=1)
+    prev_start = prev_end - timedelta(days=days - 1)
+
+    share_now = _category_share(now_start, today)
+    share_prev = _category_share(prev_start, prev_end)
+
+    names = sorted(
+        set(share_now) | set(share_prev),
+        key=lambda name: share_now.get(name, 0),
+        reverse=True,
+    )[:top_n]
+    if not names:
+        return []
+
+    changes = [round(share_now.get(name, 0) - share_prev.get(name, 0), 1) for name in names]
+    max_abs_change = max((abs(c) for c in changes), default=0) or 1
 
     trends = []
-    for item in CATEGORY_TRENDS:
-        change = item["change"]
+    for name, change in zip(names, changes):
         direction = "up" if change > 0 else "down" if change < 0 else "flat"
         trends.append({
-            "name": item["name"],
+            "name": name,
             "direction": direction,
             "change_display": f"+{change}%p" if change > 0 else (f"{change}%p" if change < 0 else "±0%p"),
             "bar_width": round(abs(change) / max_abs_change * 45, 1),
         })
+    return trends
+
+
+def dashboard_context() -> dict:
+    today = timezone.localdate()
+    yesterday = today - timedelta(days=1)
+
+    daily_data = _daily_activity()
+    max_questions = max((item["questions"] for item in daily_data), default=0) or 1
 
     active_users = User.objects.filter(is_active=True).count()
     total_users = User.objects.count()
@@ -30,16 +118,35 @@ def dashboard_context() -> dict:
     feedback_groups = feedback_context()["category_groups"]
     low_feedback = [g for g in feedback_groups if g["needs_attention"]]
 
+    today_questions = ChatHistory.objects.filter(created_at__date=today).count()
+    yesterday_questions = ChatHistory.objects.filter(created_at__date=yesterday).count()
+
+    today_new_users = User.objects.filter(date_joined__date=today).count()
+    yesterday_new_users = User.objects.filter(date_joined__date=yesterday).count()
+
+    overall_likes = ChatHistory.objects.filter(feedback=True).count()
+    overall_dislikes = ChatHistory.objects.filter(feedback=False).count()
+    overall_feedback_count = overall_likes + overall_dislikes
+    overall_score = _score(overall_likes, overall_dislikes) if overall_feedback_count else None
+
+    today_score, today_fb_count = _avg_score_for_day(today)
+    yesterday_score, yesterday_fb_count = _avg_score_for_day(yesterday)
+    if today_fb_count == 0 or yesterday_fb_count == 0:
+        score_change = "-"
+    else:
+        diff = round(today_score - yesterday_score, 1)
+        score_change = f"+{diff}" if diff > 0 else (f"{diff}" if diff < 0 else "±0")
+
     return {
         "stats": [
-            {"label": "오늘 질문 수", "value": "84", "change": "+12%", "tone": "blue"},
-            {"label": "신규 가입자", "value": "27", "change": "+34%", "tone": "green"},
-            {"label": "평균 만족도", "value": "87.2점", "change": "+2.1", "tone": "purple"},
-            {"label": "전체 사용자", "value": "1,243", "change": "+8명", "tone": "amber"},
+            {"label": "오늘 질문 수", "value": str(today_questions), "change": _pct_change_display(today_questions, yesterday_questions), "tone": "blue"},
+            {"label": "신규 가입자", "value": str(today_new_users), "change": _pct_change_display(today_new_users, yesterday_new_users), "tone": "green"},
+            {"label": "평균 만족도", "value": f"{overall_score}점" if overall_score is not None else "-", "change": score_change, "tone": "purple"},
+            {"label": "전체 사용자", "value": f"{total_users:,}", "change": f"+{today_new_users}명", "tone": "amber"},
         ],
-        "daily": [{**item, "question_height": round(item["questions"] / max_questions * 100), "user_height": round(item["users"] / max_questions * 100)} for item in DAILY_DATA],
-        "categories": CATEGORY_PIE,
-        "category_trends": trends,
+        "daily": [{**item, "question_height": round(item["questions"] / max_questions * 100), "user_height": round(item["users"] / max_questions * 100)} for item in daily_data],
+        "categories": _category_distribution(),
+        "category_trends": _category_trends(),
         "low_feedback": low_feedback,
         "total_users": total_users,
         "active_users": active_users,
@@ -75,8 +182,16 @@ def _score(likes, dislikes):
     if total == 0:
         return 0
     return round(likes / total * 100)
- 
- 
+
+
+def _avg_score_for_day(day) -> tuple[int, int]:
+    """특정 날짜의 (평균 만족도 점수, 집계 대상 피드백 수)를 반환."""
+    qs = ChatHistory.objects.filter(created_at__date=day, feedback__isnull=False)
+    likes = qs.filter(feedback=True).count()
+    dislikes = qs.filter(feedback=False).count()
+    return _score(likes, dislikes), likes + dislikes
+
+
 def _short_date(raw_date):
     """'2026-06-30 14:23' -> '06-30'. 날짜가 없거나 형식이 다르면 None을 반환해 차트 집계에서 제외."""
     if not raw_date:
