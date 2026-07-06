@@ -48,7 +48,7 @@ def dashboard_context() -> dict:
 
 
 def users_context() -> dict:
-    users = User.objects.all().annotate(questions=Count('chathistory'))
+    users = User.objects.filter(is_staff=False).annotate(questions=Count('chathistory'))
     active_count = users.filter(is_active=True).count()
     total_count = users.count()
     return {

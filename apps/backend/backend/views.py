@@ -249,6 +249,9 @@ def admin_toggle_user_status(request):
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
 
+    if user.is_staff:
+        return JsonResponse({"error": "관리자 계정은 정지할 수 없습니다."}, status=403)
+
     user.is_active = is_active
     user.save(update_fields=["is_active"])
     return JsonResponse({"ok": True, "user_id": user_id, "is_active": user.is_active})
