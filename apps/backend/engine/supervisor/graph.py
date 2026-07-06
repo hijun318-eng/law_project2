@@ -6,10 +6,11 @@ Supervisor Graph — 복합 질문을 여러 서브 에이전트에 분배하는
   - rag_router_node: 법률/판례 RAG 실행
   - calculator_node: 수당/퇴직금 계산 실행
   - news_node: 최신 뉴스 검색 실행
-  - router_decision: 조건부 엣지 (supervisor 결정에 따라 라우팅)
+  - quality_review_node: 하위 에이전트 결과를 점검하고 누락 작업을 보완
+  - router_decision: 조건부 엣지 (supervisor/quality_review 결정에 따라 라우팅)
 
 흐름:
-  supervisor → (rag_router | calculator | news) → supervisor → ... → END
+  supervisor → (rag_router | calculator | news) → supervisor → quality_review → ... → END
 """
 from typing import TypedDict, Optional
 
@@ -30,6 +31,7 @@ VALID_AGENTS = frozenset({"rag_router", "calculator", "news", "FINISH"})
 
 NODE_LABELS = {
     "supervisor":  "🤖 Supervisor",
+    "quality_review": "🧪 품질 점검",
     "rag_router":  "⚖️ 법률 RAG",
     "calculator":  "🧮 수당 계산기",
     "news":        "📰 최신 뉴스",
@@ -81,6 +83,7 @@ class SupervisorState(TypedDict):
     error: str                                   # 에러 메시지
     rag_sources: list                            # RAG 소스 문서 정보 (frontend 표시용)
     rag_procedure: str
+    review_count: int
 
 
 # ── Node 함수 ────────────────────────────────────────────────
@@ -153,6 +156,110 @@ def supervisor_node(state: SupervisorState) -> dict:
     }
 
     return {"next": next_agent, "log": log_map.get(next_agent, "")}
+
+
+def _compact_question(question: str) -> str:
+    return question.replace(" ", "").lower()
+
+
+def _needs_calculator(question: str) -> bool:
+    q = _compact_question(question)
+    keywords = (
+        "계산",
+        "얼마",
+        "금액",
+        "퇴직금",
+        "주휴수당",
+        "연차수당",
+        "해고예고수당",
+        "최저임금",
+        "급여계산",
+        "시급계산",
+    )
+    return any(keyword in q for keyword in keywords)
+
+
+def _needs_news(question: str) -> bool:
+    q = _compact_question(question)
+    keywords = (
+        "최신",
+        "최근",
+        "뉴스",
+        "개정",
+        "동향",
+        "올해",
+        "이번달",
+        "요즘",
+        "판례나왔",
+    )
+    return any(keyword in q for keyword in keywords)
+
+
+def _needs_rag(question: str) -> bool:
+    q = _compact_question(question)
+    keywords = (
+        "불법",
+        "부당",
+        "가능",
+        "판례",
+        "법",
+        "조항",
+        "근거",
+        "사례",
+        "대응절차",
+        "신고방법",
+        "구제신청",
+        "진정서",
+        "임금체불",
+        "해고",
+        "괴롭힘",
+        "산재",
+    )
+    return any(keyword in q for keyword in keywords)
+
+
+@log_node
+def quality_review_node(state: SupervisorState) -> dict:
+    """
+    하위 에이전트 결과를 점검하고, 질문 의도 대비 빠진 작업이 있으면 추가 실행을 지시한다.
+    """
+    intermediate = state.get("intermediate_results", {})
+    question = state["question"]
+    review_count = state.get("review_count", 0)
+
+    if review_count >= 2:
+        return {
+            "next": "FINISH",
+            "review_count": review_count + 1,
+            "log": "품질 점검 최대 횟수 도달",
+        }
+
+    missing = []
+    if _needs_calculator(question) and not intermediate.get("calculator"):
+        missing.append(("calculator", "계산 결과가 필요하지만 아직 실행되지 않음"))
+    if _needs_news(question) and not intermediate.get("news"):
+        missing.append(("news", "최신 정보 검색이 필요하지만 아직 실행되지 않음"))
+    if _needs_rag(question) and not intermediate.get("rag"):
+        missing.append(("rag_router", "법령/판례 또는 절차 근거가 필요하지만 아직 실행되지 않음"))
+
+    rag_answer = intermediate.get("rag", "")
+    if intermediate.get("rag") and len(rag_answer.strip()) < 80:
+        missing.append(("rag_router", "법률 답변이 너무 짧아 보완 필요"))
+
+    for next_agent, reason in missing:
+        agent_key = {"rag_router": "rag", "calculator": "calculator", "news": "news"}[next_agent]
+        if not intermediate.get(agent_key):
+            return {
+                "next": next_agent,
+                "review_count": review_count + 1,
+                "log": f"품질 점검 보완 요청: {reason}",
+            }
+
+    return {
+        "next": "FINISH",
+        "review_count": review_count + 1,
+        "log": "품질 점검 통과",
+    }
 
 
 @log_node
@@ -237,6 +344,12 @@ def router_decision(state: SupervisorState) -> str:
     return state.get("next", "FINISH")
 
 
+def review_decision(state: SupervisorState) -> str:
+    if state.get("iteration", 0) >= MAX_ITERATIONS:
+        return "FINISH"
+    return state.get("next", "FINISH")
+
+
 # ── 그래프 빌드 ──────────────────────────────────────────────
 
 def _build_graph() -> StateGraph:
@@ -244,6 +357,7 @@ def _build_graph() -> StateGraph:
 
     # 노드 등록
     builder.add_node("supervisor",  supervisor_node)
+    builder.add_node("quality_review", quality_review_node)
     builder.add_node("rag_router",  rag_router_node)
     builder.add_node("calculator",  calculator_node)
     builder.add_node("news",        news_node)
@@ -255,6 +369,17 @@ def _build_graph() -> StateGraph:
     builder.add_conditional_edges(
         "supervisor",
         router_decision,
+        {
+            "rag_router": "rag_router",
+            "calculator": "calculator",
+            "news": "news",
+            "FINISH": "quality_review",
+        },
+    )
+
+    builder.add_conditional_edges(
+        "quality_review",
+        review_decision,
         {
             "rag_router": "rag_router",
             "calculator": "calculator",

@@ -39,6 +39,7 @@ class SupervisorEngine:
             "error": "",
             "rag_sources": [],
             "rag_procedure": "",
+            "review_count": 0,
         }
 
         latest_state = dict(state)
@@ -83,6 +84,7 @@ class SupervisorEngine:
             "error": "",
             "rag_sources": [],
             "rag_procedure": "",
+            "review_count": 0,
         })
         answer_text = self._build_final_answer(result)
         sources = result.get("rag_sources", [])
