@@ -1,6 +1,3 @@
-"""
-LLM 답변 및 절차 안내 생성 노드 함수
-"""
 from pathlib import Path
 
 from engine.services.answer_service import answer_service
@@ -10,9 +7,6 @@ from engine.nodes.graph_state import GraphState
 from engine.utils.execution_logger import log_node
 
 
-# ==========================================================
-# NODE 3: LLM 답변
-# ==========================================================
 @log_node
 def generate_answer_node(state: GraphState) -> dict:
     return answer_service.generate(
@@ -23,19 +17,18 @@ def generate_answer_node(state: GraphState) -> dict:
     )
 
 
-# ==========================================================
-# NODE 4: 절차 안내
-# ==========================================================
 @log_node
 def procedure_guide_node(state: GraphState) -> dict:
     used_precedents = state.get("used_precedents", [])
+    fallback_docs = state.get("precedent_docs_direct", [])
+    fallback_category = ""
 
-    # case_based_answer 단계(generate_answer_node)를 거치지 않은 경로
-    # (예: procedure_guidance 전용 라우트)는 used_precedents가 비어 있다.
-    # 이 경우 검색 단계(retrieve_precedent_node)에서 가장 관련성 높은
-    # 판례를 fallback으로 사용한다.
+    for doc in fallback_docs:
+        fallback_category = doc.metadata.get("category", "")
+        if fallback_category:
+            break
+
     if not used_precedents:
-        fallback_docs = state.get("precedent_docs_direct", [])
         used_precedents = [
             Path(doc.metadata.get("source_file", "")).stem
             for doc in fallback_docs[:1]
@@ -43,12 +36,20 @@ def procedure_guide_node(state: GraphState) -> dict:
         ]
 
     try:
+        if fallback_category:
+            return {
+                "procedure_guide": procedure_service.generate_for_category(
+                    fallback_category,
+                ),
+            }
+
         return {
             "procedure_guide": procedure_service.generate(
                 used_precedents=used_precedents,
             ),
         }
-    except Exception:
+    except Exception as exc:
+        print(f"[procedure_guide_node] failed: {exc}", flush=True)
         return {
             "procedure_guide": "skip",
         }

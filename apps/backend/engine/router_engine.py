@@ -63,7 +63,36 @@ class LawRouterEngine:
     def __init__(self):
         self._llm = llm
 
+    @staticmethod
+    def _is_explicit_procedure_request(question: str) -> bool:
+        q = question.replace(" ", "").lower()
+        procedure_keywords = (
+            "대응절차",
+            "대처절차",
+            "진행절차",
+            "구제절차",
+            "절차알려",
+            "절차를알려",
+            "절차가뭐",
+            "신고방법",
+            "신청방법",
+            "제출방법",
+            "접수방법",
+            "어디에신고",
+            "어디다신고",
+            "어디로신고",
+            "구제신청",
+            "진정서",
+            "필요서류",
+            "준비서류",
+        )
+        return any(keyword in q for keyword in procedure_keywords)
+
     def route(self, question: str) -> str:
+        if self._is_explicit_procedure_request(question):
+            print(f"\n[라우터 판단 결과] '{ROUTE_PROCEDURE_GUIDANCE}' (rule)\n", flush=True)
+            return ROUTE_PROCEDURE_GUIDANCE
+
         resp = self._llm.invoke(
             [
                 SystemMessage(content=SYSTEM_PROMPT),
