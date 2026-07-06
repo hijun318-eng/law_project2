@@ -17,6 +17,7 @@ urlpatterns = [
     path("api/admin/vectordb/rebuild/", views.admin_rebuild_vectordb, name="admin_rebuild_vectordb"),
     path("api/admin/vectordb/reprocess/", views.admin_reprocess_failed, name="admin_reprocess_failed"),
     path("api/admin/performance/", views.admin_performance_data, name="admin_performance_data"),
+    path("api/admin/performance/price-config/", views.admin_price_config, name="admin_price_config"),
 
     path("api/advice/", views.advice_api, name="advice_api"),
     path("api/advice/feedback/", views.feedback_api, name="feedback_api"),

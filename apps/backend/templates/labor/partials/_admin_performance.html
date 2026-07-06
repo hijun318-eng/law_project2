@@ -66,4 +66,27 @@
             </div>
         </article>
     </div>
+
+    <!-- 토큰당 가격 설정 -->
+    <div class="page-head">
+        <h2 class="perf-section-title" style="margin:0;">토큰당 가격 설정</h2>
+    </div>
+    <div class="admin-grid">
+        <article class="panel wide">
+            <p style="margin-top:0; color:var(--text-muted);">모델별 토큰당 가격을 설정할 수 있습니다. 변경된 가격은 이후 조회부터 적용됩니다.</p>
+            <div id="priceConfigForm">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="border-bottom:2px solid var(--border);">
+                            <th style="text-align:left; padding:8px;">모델명</th>
+                            <th style="text-align:right; padding:8px;">Input ($/1M tokens)</th>
+                            <th style="text-align:right; padding:8px;">Output ($/1M tokens)</th>
+                            <th style="padding:8px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="priceConfigBody"></tbody>
+                </table>
+            </div>
+        </article>
+    </div>
 </section>
