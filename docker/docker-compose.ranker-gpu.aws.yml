@@ -10,13 +10,13 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=ranker.settings
       - DEBUG=False
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
       - RERANKER_DEVICE=cuda
       - RERANKER_BATCH_SIZE=${RERANKER_BATCH_SIZE:-4}
       - RERANKER_MAX_DOCUMENTS=${RERANKER_MAX_DOCUMENTS:-30}
       - RERANKER_MAX_CHARS=${RERANKER_MAX_CHARS:-1800}
     volumes:
-      - huggingface_cache:/root/.cache/huggingface
+      - /opt/dlami/nvme/huggingface:/root/.cache/huggingface
     gpus: all
     deploy:
       resources:
@@ -26,6 +26,3 @@ services:
               count: 1
               capabilities: [gpu]
     restart: unless-stopped
-
-volumes:
-  huggingface_cache:

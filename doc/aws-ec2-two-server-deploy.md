@@ -112,6 +112,19 @@ Ranker EC2는 GPU를 Docker 컨테이너에서 사용할 수 있어야 합니다
 
 가능하면 NVIDIA/CUDA가 준비된 AMI를 사용합니다. 직접 설치하는 경우에는 NVIDIA driver와 NVIDIA Container Toolkit 설치가 필요합니다.
 
+Deep Learning AMI는 루트 디스크가 작고 `/opt/dlami/nvme`에 큰 임시 디스크가 붙어 있는 경우가 많습니다. 이 프로젝트의 ranker compose는 Hugging Face 모델 캐시를 아래 경로에 저장하도록 설정했습니다.
+
+```text
+/opt/dlami/nvme/huggingface
+```
+
+따라서 실행 전에 디렉터리를 만들어둡니다.
+
+```bash
+sudo mkdir -p /opt/dlami/nvme/huggingface
+sudo chown -R ubuntu:ubuntu /opt/dlami/nvme/huggingface
+```
+
 GPU 확인:
 
 ```bash
@@ -241,3 +254,19 @@ RERANKER_MAX_CHARS=1200
 docker compose -f docker/docker-compose.ranker-gpu.aws.yml down
 docker compose -f docker/docker-compose.ranker-gpu.aws.yml up -d --build
 ```
+
+### 모델 다운로드 중 디스크 부족이 나는 경우
+
+아래처럼 루트 디스크가 거의 꽉 차 있고 `/opt/dlami/nvme`에 여유가 있다면 정상적인 상황입니다.
+
+```bash
+df -h / /opt/dlami/nvme
+```
+
+Docker build cache를 정리합니다.
+
+```bash
+docker builder prune -af
+```
+
+그 다음 ranker compose를 다시 실행합니다.
