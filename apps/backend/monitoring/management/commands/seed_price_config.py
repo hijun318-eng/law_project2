@@ -3,6 +3,7 @@ from monitoring.models import PriceConfig
 
 DEFAULT_PRICES = [
     {"model_name": "gpt-4o-mini", "prompt_token_price": 0.15, "completion_token_price": 0.60},
+    {"model_name": "gpt-5.4-nano", "prompt_token_price": 0.20, "completion_token_price": 1.25},
     {"model_name": "text-embedding-3-small", "prompt_token_price": 0.02, "completion_token_price": 0.02},
 ]
 
