@@ -13,9 +13,11 @@ _logger_context: contextvars.ContextVar = contextvars.ContextVar("query_logger",
 
 
 class QueryLogger:
-    def __init__(self, question: str):
+    def __init__(self, question: str, session_id: str | None = None):
         self.question = question
+        self.session_id = session_id
         self.nodes = []  # list of dict: {"node": str, "elapsed_seconds": float, "status": str, "timestamp": str}
+        self.llm_usages = []  # list of dict: LLM/embedding API call usage
         self.start_time = time.time()
         self.start_timestamp = datetime.now().isoformat()
         self.end_time = None
@@ -29,6 +31,20 @@ class QueryLogger:
             "elapsed_seconds": round(elapsed, 6),
             "status": status,
             "timestamp": datetime.now().isoformat()
+        })
+
+    def record_llm_usage(self, node_name: str, model: str, call_type: str = "llm",
+                         prompt_tokens: int = 0, completion_tokens: int = 0,
+                         total_tokens: int = 0):
+        """Record LLM/embedding API call usage"""
+        self.llm_usages.append({
+            "node_name": node_name,
+            "model": model,
+            "call_type": call_type,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+            "timestamp": datetime.now().isoformat(),
         })
 
     def finish(self, answer: str):
@@ -68,10 +84,53 @@ class QueryLogger:
             print(f"Warning: Failed to save log: {e}")
         return filepath
 
+    def save_db(self) -> int:
+        """Save node execution logs and LLM usage logs to DB via bulk_create. Returns total records saved."""
+        from monitoring.models import NodeExecutionLog, LLMUsageLog
 
-def init_logger(question: str) -> QueryLogger:
+        total = 0
+        try:
+            # NodeExecutionLog bulk_create
+            node_objs = [
+                NodeExecutionLog(
+                    session_id=self.session_id or "",
+                    node_name=n["node"],
+                    elapsed_ms=n["elapsed_seconds"] * 1000,  # 초 → ms 변환
+                    status=n["status"],
+                    created_at=datetime.fromisoformat(n["timestamp"]) if isinstance(n["timestamp"], str) else n["timestamp"],
+                )
+                for n in self.nodes
+            ]
+            if node_objs:
+                NodeExecutionLog.objects.bulk_create(node_objs)
+                total += len(node_objs)
+
+            # LLMUsageLog bulk_create
+            llm_objs = [
+                LLMUsageLog(
+                    session_id=self.session_id or "",
+                    node_name=u["node_name"],
+                    model=u["model"],
+                    call_type=u["call_type"],
+                    prompt_tokens=u["prompt_tokens"],
+                    completion_tokens=u["completion_tokens"],
+                    total_tokens=u["total_tokens"],
+                    created_at=datetime.fromisoformat(u["timestamp"]) if isinstance(u["timestamp"], str) else u["timestamp"],
+                )
+                for u in self.llm_usages
+            ]
+            if llm_objs:
+                LLMUsageLog.objects.bulk_create(llm_objs)
+                total += len(llm_objs)
+        except Exception as e:
+            print(f"Warning: Failed to save to DB: {e}")
+            return 0
+        return total
+
+
+def init_logger(question: str, session_id: str | None = None) -> QueryLogger:
     """Initialize a new QueryLogger for the given question and set it as the active logger."""
-    logger = QueryLogger(question)
+    logger = QueryLogger(question, session_id=session_id)
     _logger_context.set(logger)
     return logger
 
@@ -82,7 +141,13 @@ def get_logger() -> QueryLogger | None:
 
 
 def clear_logger():
-    """Clear the active logger."""
+    """Clear the active logger. If there are unsaved data, try saving to DB first."""
+    logger = get_logger()
+    if logger and (logger.nodes or logger.llm_usages):
+        try:
+            logger.save_db()
+        except Exception:
+            pass
     _logger_context.set(None)
 
 
