@@ -9,45 +9,6 @@ MOCK_USERS = [
     {"id": 8, "name": "임태양", "email": "taeyang@example.com", "join_date": "2024-07-20", "last_login": "2026-06-25", "status": "active", "questions": 9},
 ]
 
-MOCK_QUESTIONS = [
-    {"id": 1, "user": "김민준", "category": "임금체불", "question": "3개월째 급여를 받지 못했습니다. 어떻게 신고하나요?", "date": "2026-06-30 14:23", "likes": 45, "dislikes": 2},
-    {"id": 2, "user": "이서연", "category": "부당해고", "question": "갑자기 해고 통보를 받았는데 정당한 이유가 없습니다.", "date": "2026-06-30 11:05", "likes": 38, "dislikes": 4},
-    {"id": 3, "user": "최유진", "category": "퇴직금", "question": "1년 2개월 근무 후 퇴직합니다. 퇴직금 계산 방법이 궁금합니다.", "date": "2026-06-29 16:40", "likes": 62, "dislikes": 1},
-    {"id": 4, "user": "정다은", "category": "연차휴가", "question": "입사 후 1년이 안 됐는데 연차가 몇 개인가요?", "date": "2026-06-29 09:15", "likes": 29, "dislikes": 3},
-    {"id": 5, "user": "오미래", "category": "최저임금", "question": "2026년 최저임금이 얼마인가요? 현재 9,500원을 받고 있습니다.", "date": "2026-06-28 20:30", "likes": 18, "dislikes": 12},
-    {"id": 6, "user": "임태양", "category": "포괄임금제", "question": "회사가 포괄임금제라며 야근수당을 안 줍니다.", "date": "2026-06-28 15:00", "likes": 11, "dislikes": 19},
-    {"id": 7, "user": "한승호", "category": "직장내괴롭힘", "question": "상사의 지속적인 폭언과 따돌림으로 고통받고 있습니다.", "date": "2026-06-27 13:22", "likes": 33, "dislikes": 5},
-    {"id": 8, "user": "박지호", "category": "산업재해", "question": "업무 중 부상을 당했는데 산재 신청 절차가 어떻게 되나요?", "date": "2026-06-27 10:11", "likes": 47, "dislikes": 2},
-]
-
-CATEGORY_PIE = [
-    {"name": "임금체불", "value": 27},
-    {"name": "부당해고", "value": 22},
-    {"name": "퇴직금", "value": 15},
-    {"name": "연차휴가", "value": 12},
-    {"name": "최저임금", "value": 10},
-    {"name": "직장내괴롭힘", "value": 8},
-    {"name": "산업재해", "value": 6},
-]
-
-CATEGORY_TRENDS = [
-    {"name": "임금체불", "change": 8},
-    {"name": "부당해고", "change": -3},
-    {"name": "연차휴가", "change": 0},
-    {"name": "산업재해", "change": 5},
-    {"name": "근로계약", "change": -2},
-]
-
-DAILY_DATA = [
-    {"date": "6/25", "questions": 47, "users": 12},
-    {"date": "6/26", "questions": 52, "users": 15},
-    {"date": "6/27", "questions": 61, "users": 18},
-    {"date": "6/28", "questions": 58, "users": 14},
-    {"date": "6/29", "questions": 73, "users": 21},
-    {"date": "6/30", "questions": 84, "users": 27},
-    {"date": "7/1", "questions": 38, "users": 9},
-]
-
 NEWS_DATA = [
     {"id": 1, "title": "2026년 최저임금 10,030원으로 확정", "date": "2026-06-28",  "summary": "고용노동부는 2026년 적용 최저임금을 시간당 10,030원으로 최종 고시했습니다. 전년 대비 1.8% 인상된 수치로, 월 209시간 기준 약 209만 6천 원에 해당합니다."},
     {"id": 2, "title": "직장 내 괴롭힘 신고 건수 역대 최고치", "date": "2026-06-25", "summary": "상반기 직장 내 괴롭힘 신고 건수가 전년 동기 대비 34% 증가하며 역대 최고치를 기록했습니다. 고용노동부는 사업장 실태조사를 강화할 방침입니다."},

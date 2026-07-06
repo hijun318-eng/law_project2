@@ -60,7 +60,7 @@ function hideUserError() {
 export function initAdminUsers() {
     document.querySelector("[data-user-search]")?.addEventListener("input", filterUsers);
     document.querySelector("[data-user-status]")?.addEventListener("change", filterUsers);
-    document.querySelector(".page-head .secondary-button")?.addEventListener("click", exportUsersCSV);
+    document.querySelector("[data-export-users]")?.addEventListener("click", exportUsersCSV);
 
     document.querySelectorAll("[data-toggle-status]").forEach((button) => button.addEventListener("click", () => {
         if (button.disabled) return;

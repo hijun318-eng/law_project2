@@ -4,7 +4,7 @@
             <h1>사용자 관리</h1>
             <p>전체 {{ users|length }}명 · 활성 {{ active_count }}명 · 정지 {{ suspended_count }}명</p>
         </div>
-        <button class="secondary-button">내보내기</button>
+        <button class="secondary-button" type="button" data-export-users>내보내기</button>
     </div>
     <div class="table-tools">
         <input data-user-search placeholder="이름 또는 이메일 검색">

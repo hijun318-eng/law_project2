@@ -34,10 +34,17 @@ function initCategoryDonut() {
     });
 }
 
+function initDashboardRefresh() {
+    document.querySelector("[data-dashboard-refresh]")?.addEventListener("click", () => {
+        window.location.reload();
+    });
+}
+
 export function initAdminDashboard() {
     try {
         initCategoryDonut();
     } catch (err) {
         console.error("카테고리 분포 렌더링 실패:", err);
     }
+    initDashboardRefresh();
 }
