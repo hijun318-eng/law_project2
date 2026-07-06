@@ -129,18 +129,19 @@ def supervisor_node(state: SupervisorState) -> dict:
     resp = llm.invoke(messages)
     raw = resp.content.strip().lower().replace('"', "").replace("'", "").replace(".", "").strip()
 
-    # 응답 파싱 — 포함된 키워드로 판단
-    next_agent = "FINISH"  # 기본값
-
-    if "rag" in raw or "법률" in raw:
-        if "rag" not in already_done:
-            next_agent = "rag_router"
+    # LLM 응답 파싱 — 정확히 일치하는 노드 ID를 우선하고,
+    # 형식이 어긋난 경우에만 키워드 포함 여부로 폴백 판단한다.
+    exact_matches = {"rag_router", "calculator", "news", "finish"}
+    if raw in exact_matches:
+        next_agent = "FINISH" if raw == "finish" else raw
+    elif "rag" in raw or "법률" in raw:
+        next_agent = "rag_router"
     elif "calc" in raw or "계산" in raw:
-        if "calculator" not in already_done:
-            next_agent = "calculator"
+        next_agent = "calculator"
     elif "news" in raw or "뉴스" in raw:
-        if "news" not in already_done:
-            next_agent = "news"
+        next_agent = "news"
+    else:
+        next_agent = "FINISH"
 
     # 중복 방지: 이미 실행된 에이전트는 FINISH 처리
     if next_agent != "FINISH":
@@ -158,70 +159,32 @@ def supervisor_node(state: SupervisorState) -> dict:
     return {"next": next_agent, "log": log_map.get(next_agent, "")}
 
 
-def _compact_question(question: str) -> str:
-    return question.replace(" ", "").lower()
+QUALITY_REVIEW_SYSTEM_PROMPT = """당신은 노동법률 AI 시스템의 품질 검토자입니다.
+사용자의 원본 질문과 지금까지 실행된 에이전트 결과를 보고, 질문에 제대로 답하기 위해
+반드시 필요한데 아직 실행되지 않은 에이전트가 있는지 판단하세요.
 
+## 전담 에이전트 목록
+- rag_router — 법률/판례 검색, 법적 판단, 대응 절차·신고 방법 근거
+- calculator — 수당/퇴직금/최저임금 등 금액 계산
+- news — 최신 노동법 뉴스/판결/정책 검색
 
-def _needs_calculator(question: str) -> bool:
-    q = _compact_question(question)
-    keywords = (
-        "계산",
-        "얼마",
-        "금액",
-        "퇴직금",
-        "주휴수당",
-        "연차수당",
-        "해고예고수당",
-        "최저임금",
-        "급여계산",
-        "시급계산",
-    )
-    return any(keyword in q for keyword in keywords)
+## 판단 규칙
+- 이미 실행된 에이전트는 다시 선택하지 마세요.
+- 질문에 답하는 데 꼭 필요한 작업만 보완 요청하세요. 과도한 보완 요청은 피하세요.
+- 충분하면 FINISH를 선택하세요.
 
-
-def _needs_news(question: str) -> bool:
-    q = _compact_question(question)
-    keywords = (
-        "최신",
-        "최근",
-        "뉴스",
-        "개정",
-        "동향",
-        "올해",
-        "이번달",
-        "요즘",
-        "판례나왔",
-    )
-    return any(keyword in q for keyword in keywords)
-
-
-def _needs_rag(question: str) -> bool:
-    q = _compact_question(question)
-    keywords = (
-        "불법",
-        "부당",
-        "가능",
-        "판례",
-        "법",
-        "조항",
-        "근거",
-        "사례",
-        "대응절차",
-        "신고방법",
-        "구제신청",
-        "진정서",
-        "임금체불",
-        "해고",
-        "괴롭힘",
-        "산재",
-    )
-    return any(keyword in q for keyword in keywords)
+## 응답 형식
+반드시 아래 중 하나만 응답하세요 (따옴표 없이, 부가 설명 없이):
+rag_router
+calculator
+news
+FINISH"""
 
 
 @log_node
 def quality_review_node(state: SupervisorState) -> dict:
     """
-    하위 에이전트 결과를 점검하고, 질문 의도 대비 빠진 작업이 있으면 추가 실행을 지시한다.
+    LLM이 하위 에이전트 결과를 점검하고, 질문 의도 대비 빠진 작업이 있으면 추가 실행을 지시한다.
     """
     intermediate = state.get("intermediate_results", {})
     question = state["question"]
@@ -234,31 +197,58 @@ def quality_review_node(state: SupervisorState) -> dict:
             "log": "품질 점검 최대 횟수 도달",
         }
 
-    missing = []
-    if _needs_calculator(question) and not intermediate.get("calculator"):
-        missing.append(("calculator", "계산 결과가 필요하지만 아직 실행되지 않음"))
-    if _needs_news(question) and not intermediate.get("news"):
-        missing.append(("news", "최신 정보 검색이 필요하지만 아직 실행되지 않음"))
-    if _needs_rag(question) and not intermediate.get("rag"):
-        missing.append(("rag_router", "법령/판례 또는 절차 근거가 필요하지만 아직 실행되지 않음"))
+    already_done = [k for k in ("rag", "calculator", "news") if intermediate.get(k)]
+    done_summary = ", ".join(already_done) if already_done else "없음"
 
     rag_answer = intermediate.get("rag", "")
-    if intermediate.get("rag") and len(rag_answer.strip()) < 80:
-        missing.append(("rag_router", "법률 답변이 너무 짧아 보완 필요"))
+    rag_note = " (⚠️ 80자 미만으로 매우 짧음 — 보완 필요할 수 있음)" if rag_answer and len(rag_answer.strip()) < 80 else ""
 
-    for next_agent, reason in missing:
+    context = (
+        f"\n[실행된 에이전트 결과]\n"
+        f"- rag_router: {'완료' + rag_note if intermediate.get('rag') else '미실행'}\n"
+        f"- calculator: {'완료' if intermediate.get('calculator') else '미실행'}\n"
+        f"- news: {'완료' if intermediate.get('news') else '미실행'}\n"
+        f"[이미 실행 완료된 에이전트 (재선택 금지)]\n"
+        f"{done_summary}\n\n"
+        f"보완이 필요한 에이전트:"
+    )
+
+    messages = [
+        SystemMessage(content=QUALITY_REVIEW_SYSTEM_PROMPT + context),
+        HumanMessage(content=f"사용자 질문: {question}"),
+    ]
+
+    resp = llm.invoke(messages)
+    raw = resp.content.strip().lower().replace('"', "").replace("'", "").replace(".", "").strip()
+
+    exact_matches = {"rag_router", "calculator", "news", "finish"}
+    if raw in exact_matches:
+        next_agent = "FINISH" if raw == "finish" else raw
+    elif "rag" in raw or "법률" in raw:
+        next_agent = "rag_router"
+    elif "calc" in raw or "계산" in raw:
+        next_agent = "calculator"
+    elif "news" in raw or "뉴스" in raw:
+        next_agent = "news"
+    else:
+        next_agent = "FINISH"
+
+    if next_agent != "FINISH":
         agent_key = {"rag_router": "rag", "calculator": "calculator", "news": "news"}[next_agent]
-        if not intermediate.get(agent_key):
-            return {
-                "next": next_agent,
-                "review_count": review_count + 1,
-                "log": f"품질 점검 보완 요청: {reason}",
-            }
+        if agent_key in already_done:
+            next_agent = "FINISH"
+
+    log_map = {
+        "rag_router": "품질 점검 보완 요청: 법률 답변 보완 필요",
+        "calculator": "품질 점검 보완 요청: 계산 결과 필요",
+        "news": "품질 점검 보완 요청: 최신 정보 검색 필요",
+        "FINISH": "품질 점검 통과",
+    }
 
     return {
-        "next": "FINISH",
+        "next": next_agent,
         "review_count": review_count + 1,
-        "log": "품질 점검 통과",
+        "log": log_map.get(next_agent, ""),
     }
 
 

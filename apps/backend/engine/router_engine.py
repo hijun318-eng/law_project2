@@ -29,27 +29,29 @@ ROUTE_LATEST_NEWS = "latest_news"
 
 
 SYSTEM_PROMPT = """
-너는 노동법률 AI 라우터야. 
-사용자의 질문을 분석하여 아래 4개의 노드 ID 중 가장 적합한 것 딱 1개만 반환해.
+너는 노동법률 AI 라우터야.
+사용자의 질문을 분석하여 아래 5개의 노드 ID 중 가장 적합한 것 딱 1개만 반환해.
 
 [노드 목록 및 판단 기준]
-1. case_based_answer (최우선 방어)
-   - 본인의 상황을 설명하며 "이게 불법인가요?", "비슷한 사례나 판례가 있나요?" 등 **법리적 해석이나 유사 사례 검토**가 필요한 경우.
-   - 🚨 중요: "이런 상황인데 대응 절차 알려줘"처럼 **상황 판단과 절차를 동시에 묻는 질문**은 무조건 'case_based_answer'로 분류해. (사례 파악이 먼저 선행되어야 함)
+1. case_based_answer
+   - 본인의 상황을 설명하며 "이게 불법인가요?", "비슷한 사례나 판례가 있나요?" 등 **법리적 해석이나 유사 사례 검토**만 필요한 경우 (절차 문의는 없음).
 
-2. procedure_guidance (순수 절차 문의)
-   - 내 상황에 대한 해석이나 판례 검토는 필요 없고, **오직 행정/대응 절차, 서류, 방법**만을 묻는 경우.
+2. case_with_procedure
+   - 본인의 상황을 설명하면서 동시에 "대응 절차", "신고 방법", "어떻게 대응해야 하나요" 등 **사례 판단과 절차 안내가 함께** 필요한 경우.
+   - 예시: "부당해고 당한 것 같은데 대응 절차 알려줘", "임금체불인데 신고 방법도 알려줘"
+
+3. procedure_guidance (순수 절차 문의)
+   - 본인 상황에 대한 해석이나 판례 검토는 필요 없고, **오직 행정/대응 절차, 서류, 방법**만을 묻는 경우.
    - 예시: "노동청 진정서 제출 방법 알려줘", "임금체불 신고 어디서 해?", "실업급여 신청 서류가 뭐야?"
 
-3. allowance_calculator
+4. allowance_calculator
    - 주휴수당, 연차수당, 해고예고수당, 퇴직금 등 구체적인 **금액 계산**을 요구하는 경우.
 
-4. latest_news (최신 동향 및 뉴스 검색)
+5. latest_news (최신 동향 및 뉴스 검색)
    - 노동법 개정, 최근 판결, 최저임금, 정책 등 **최신 뉴스나 사회적 이슈**를 묻는 경우.
    - 예시: "최근 중대재해처벌법 판례 찾아줘", "올해 최저임금 관련 뉴스 있어?", "요즘 직장내 괴롭힘 뉴스 알려줘"
 
 [출력 규칙]
-- 질문에 '절차', '방법'이라는 단어가 있더라도, 본인의 억울한 사연이나 구체적 정황을 설명하며 묻는다면 무조건 'case_based_answer'로 빼야 해.
 - 부가적인 설명이나 마침표 없이, 오직 선택된 '노드 ID' 영문 텍스트 딱 하나만 출력해.
 """.strip()
 
@@ -122,13 +124,6 @@ class LawRouterEngine:
         return any(keyword in q for keyword in case_keywords)
 
     def route(self, question: str) -> str:
-        if self._is_explicit_procedure_request(question):
-            if self._has_case_context(question):
-                print(f"\n[라우터 판단 결과] '{ROUTE_CASE_WITH_PROCEDURE}' (rule)\n", flush=True)
-                return ROUTE_CASE_WITH_PROCEDURE
-            print(f"\n[라우터 판단 결과] '{ROUTE_PROCEDURE_GUIDANCE}' (rule)\n", flush=True)
-            return ROUTE_PROCEDURE_GUIDANCE
-
         resp = self._llm.invoke(
             [
                 SystemMessage(content=SYSTEM_PROMPT),
@@ -140,18 +135,28 @@ class LawRouterEngine:
             mode = (mode_raw or "").strip().lower()
         else:
             mode = str(mode_raw).strip().lower()
-            
+
         # 디버깅 로그
-        print(f"\n[라우터 판단 결과] '{mode}'\n")
+        print(f"\n[라우터 판단 결과] '{mode}' (llm)\n")
 
         if mode in {
             ROUTE_CASE_BASED_ANSWER,
             ROUTE_CASE_WITH_PROCEDURE,
             ROUTE_PROCEDURE_GUIDANCE,
             ROUTE_ALLOWANCE_CALCULATOR,
-            ROUTE_LATEST_NEWS,  # 허용 목록에 추가
+            ROUTE_LATEST_NEWS,
         }:
             return mode
+
+        # LLM 응답이 유효한 노드 ID가 아닐 때만 키워드 규칙으로 폴백
+        if self._is_explicit_procedure_request(question):
+            if self._has_case_context(question):
+                print(f"\n[라우터 판단 결과] '{ROUTE_CASE_WITH_PROCEDURE}' (fallback rule)\n", flush=True)
+                return ROUTE_CASE_WITH_PROCEDURE
+            print(f"\n[라우터 판단 결과] '{ROUTE_PROCEDURE_GUIDANCE}' (fallback rule)\n", flush=True)
+            return ROUTE_PROCEDURE_GUIDANCE
+
+        print(f"\n[라우터 판단 결과] '{ROUTE_CASE_BASED_ANSWER}' (fallback default)\n", flush=True)
         return ROUTE_CASE_BASED_ANSWER
 
     def run(self, question: str) -> RouterResult:
