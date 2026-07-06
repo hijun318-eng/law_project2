@@ -1,5 +1,5 @@
 <section class="admin-page">
-    <div class="page-head"><div><h1>관리자 대시보드</h1><p>2026년 7월 1일 기준</p></div><button class="secondary-button">새로고침</button></div>
+    <div class="page-head"><div><h1>관리자 대시보드</h1><p>2026년 7월 1일 기준</p></div><button class="secondary-button" type="button" data-dashboard-refresh>새로고침</button></div>
     <div class="stat-grid">
         {% for stat in stats %}
         <article class="stat-card {{ stat.tone }}"><span>{{ stat.change }}</span><strong>{{ stat.value }}</strong><p>{{ stat.label }}</p></article>
