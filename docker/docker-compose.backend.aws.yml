@@ -10,7 +10,6 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=backend.settings
       - DEBUG=False
-      - RANKER_URL=${RANKER_URL}
     volumes:
       - ../vector_db:/app/vector_db:ro
       - ../data:/app/data:ro

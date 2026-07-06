@@ -96,8 +96,8 @@ RANKER_URL=http://RANKER_PRIVATE_IP:8001
 프로젝트 루트에서 실행합니다.
 
 ```bash
-docker compose -f docker/docker-compose.backend.aws.yml up -d --build
-docker compose -f docker/docker-compose.backend.aws.yml logs -f
+docker compose --env-file .env -f docker/docker-compose.backend.aws.yml up -d --build
+docker compose --env-file .env -f docker/docker-compose.backend.aws.yml logs -f
 ```
 
 접속 확인:
@@ -236,7 +236,7 @@ docker compose -f docker/docker-compose.ranker-gpu.aws.yml logs -f
 ### Backend 컨테이너 로그 확인
 
 ```bash
-docker compose -f docker/docker-compose.backend.aws.yml logs -f
+docker compose --env-file .env -f docker/docker-compose.backend.aws.yml logs -f
 ```
 
 ### OOM으로 죽는 경우
