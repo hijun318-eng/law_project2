@@ -88,42 +88,60 @@ class LawRouterEngine:
             return mode
         return ROUTE_CASE_BASED_ANSWER
 
-    def run(self, question: str) -> RouterResult:
+    def run(self, question: str, session_id: str | None = None) -> RouterResult:
         mode = self.route(question)
 
-        if mode == ROUTE_CASE_BASED_ANSWER:
-            state = graph_answer.invoke({"question": question})
-            return RouterResult(mode=mode, content=state.get("final_answer", ""))
+        # LangGraph 실행 모드(case_based_answer, procedure_guidance)에서만 logger 초기화
+        langgraph_modes = (ROUTE_CASE_BASED_ANSWER, ROUTE_PROCEDURE_GUIDANCE)
+        if mode in langgraph_modes:
+            from engine.utils.execution_logger import init_logger
+            init_logger(question, session_id=session_id)
 
-        if mode == ROUTE_PROCEDURE_GUIDANCE:
-            state = graph_procedure.invoke({"question": question})
-            return RouterResult(mode=mode, content=state.get("procedure_guide", "skip"))
+        result = RouterResult(mode=mode, content="")  # fallback (예외 발생 시 finally에서 사용)
+        try:
+            if mode == ROUTE_CASE_BASED_ANSWER:
+                state = graph_answer.invoke({"question": question})
+                result = RouterResult(mode=mode, content=state.get("final_answer", ""))
 
-        if mode == ROUTE_ALLOWANCE_CALCULATOR:
-            engine = CalculatorEngine()
-            res = engine.calculate(question)
-            return RouterResult(mode=mode, content=res.get("answer", ""))
+            elif mode == ROUTE_PROCEDURE_GUIDANCE:
+                state = graph_procedure.invoke({"question": question})
+                result = RouterResult(mode=mode, content=state.get("procedure_guide", "skip"))
 
-        # 🌟 latest_news 로직 추가
-        if mode == ROUTE_LATEST_NEWS:
-            # 1. 만약 통합된 NewsEngine 객체(프론트엔드에서 사용 중인 객체)가 있다면 그것을 사용하도록 연결 가능.
-            # 2. 여기서는 올려주신 NewsSearchTool을 직접 호출하여 답변을 구성합니다.
-            from engine.tools.news_search_tool import NewsSearchTool
-            tool = NewsSearchTool()
-            res = tool.run(query=question, display=5)
+            elif mode == ROUTE_ALLOWANCE_CALCULATOR:
+                engine = CalculatorEngine()
+                res = engine.calculate(question)
+                result = RouterResult(mode=mode, content=res.get("answer", ""))
 
-            if not res.success or not res.data.get("results"):
-                content = "⚠️ 관련 최신 뉴스를 찾을 수 없습니다. 다른 검색어를 입력해 보세요."
-            else:
-                items = res.data["results"]
-                content = "📰 **관련 최신 뉴스 검색 결과입니다.**\n\n"
-                for i, item in enumerate(items, 1):
-                    # HTML 이스케이프 및 날짜 정리된 데이터 사용
-                    title = item.get("title", "제목 없음")
-                    link = item.get("link", "#")
-                    desc = item.get("description", "")
-                    content += f"**{i}. [{title}]({link})**\n> {desc}...\n\n"
+            elif mode == ROUTE_LATEST_NEWS:
+                # 1. 만약 통합된 NewsEngine 객체(프론트엔드에서 사용 중인 객체)가 있다면 그것을 사용하도록 연결 가능.
+                # 2. 여기서는 올려주신 NewsSearchTool을 직접 호출하여 답변을 구성합니다.
+                from engine.tools.news_search_tool import NewsSearchTool
+                tool = NewsSearchTool()
+                res = tool.run(query=question, display=5)
 
-            return RouterResult(mode=mode, content=content)
+                if not res.success or not res.data.get("results"):
+                    content = "⚠️ 관련 최신 뉴스를 찾을 수 없습니다. 다른 검색어를 입력해 보세요."
+                else:
+                    items = res.data["results"]
+                    content = "📰 **관련 최신 뉴스 검색 결과입니다.**\n\n"
+                    for i, item in enumerate(items, 1):
+                        # HTML 이스케이프 및 날짜 정리된 데이터 사용
+                        title = item.get("title", "제목 없음")
+                        link = item.get("link", "#")
+                        desc = item.get("description", "")
+                        content += f"**{i}. [{title}]({link})**\n> {desc}...\n\n"
+
+                result = RouterResult(mode=mode, content=content)
+
+            return result
+        finally:
+            from engine.utils.execution_logger import get_logger, clear_logger
+            logger = get_logger()
+            if logger:
+                answer = result.content
+                logger.finish(answer)
+                logger.save_db()
+                logger.save()
+                clear_logger()
 
 router_engine = LawRouterEngine()

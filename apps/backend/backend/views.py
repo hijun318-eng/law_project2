@@ -334,7 +334,7 @@ def advice_api(request):
 
     answer = ""
     try:
-        result = router_engine.run(question)
+        result = router_engine.run(question, session_id=str(chat.id))
         answer = result.content
         chat.mode = result.mode
     except Exception as e:
