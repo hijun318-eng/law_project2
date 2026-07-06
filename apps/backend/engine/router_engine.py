@@ -1,36 +1,36 @@
 """
 engine/router_engine.py
 
-홈 입력을 4개 모드 중 하나로 분류한 뒤, 해당 로직을 실행합니다.
+법률 RAG 하위 질문을 3개 모드 중 하나로 분류한 뒤, 해당 로직을 실행합니다.
+(수당 계산/최신 뉴스는 Supervisor가 별도의 전담 노드로 직접 처리하므로
+ 이 라우터의 책임 범위가 아닙니다.)
 
 모드
 1) case_based_answer: 유사 법률/판례 추출 + 최종 답변 생성 (graph_answer)
-2) procedure_guidance: 대응 절차 안내만 생성 (graph_procedure)
-3) allowance_calculator: 수당 계산 (CalculatorEngine)
-4) latest_news: 최신 노동법/판결 뉴스 검색 (NewsSearchTool / NewsEngine)
+2) case_with_procedure: 사례 판단 + 대응 절차 안내 (graph)
+3) procedure_guidance: 대응 절차 안내만 생성 (graph_procedure)
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from engine.config import llm
-from engine.calculator_engine import CalculatorEngine
 from engine.graph import graph, graph_answer, graph_procedure
+from engine.utils.sources import format_sources
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 ROUTE_CASE_BASED_ANSWER = "case_based_answer"
 ROUTE_CASE_WITH_PROCEDURE = "case_with_procedure"
 ROUTE_PROCEDURE_GUIDANCE = "procedure_guidance"
-ROUTE_ALLOWANCE_CALCULATOR = "allowance_calculator"
-# 🌟 최신 뉴스 검색 모드 추가
-ROUTE_LATEST_NEWS = "latest_news"
+
+VALID_ROUTES = {ROUTE_CASE_BASED_ANSWER, ROUTE_CASE_WITH_PROCEDURE, ROUTE_PROCEDURE_GUIDANCE}
 
 
 SYSTEM_PROMPT = """
 너는 노동법률 AI 라우터야.
-사용자의 질문을 분석하여 아래 5개의 노드 ID 중 가장 적합한 것 딱 1개만 반환해.
+사용자의 질문을 분석하여 아래 3개의 노드 ID 중 가장 적합한 것 딱 1개만 반환해.
 
 [노드 목록 및 판단 기준]
 1. case_based_answer
@@ -44,13 +44,6 @@ SYSTEM_PROMPT = """
    - 본인 상황에 대한 해석이나 판례 검토는 필요 없고, **오직 행정/대응 절차, 서류, 방법**만을 묻는 경우.
    - 예시: "노동청 진정서 제출 방법 알려줘", "임금체불 신고 어디서 해?", "실업급여 신청 서류가 뭐야?"
 
-4. allowance_calculator
-   - 주휴수당, 연차수당, 해고예고수당, 퇴직금 등 구체적인 **금액 계산**을 요구하는 경우.
-
-5. latest_news (최신 동향 및 뉴스 검색)
-   - 노동법 개정, 최근 판결, 최저임금, 정책 등 **최신 뉴스나 사회적 이슈**를 묻는 경우.
-   - 예시: "최근 중대재해처벌법 판례 찾아줘", "올해 최저임금 관련 뉴스 있어?", "요즘 직장내 괴롭힘 뉴스 알려줘"
-
 [출력 규칙]
 - 부가적인 설명이나 마침표 없이, 오직 선택된 '노드 ID' 영문 텍스트 딱 하나만 출력해.
 """.strip()
@@ -60,6 +53,8 @@ SYSTEM_PROMPT = """
 class RouterResult:
     mode: str
     content: str
+    sources: list = field(default_factory=list)
+    procedure: str = ""
 
 
 class LawRouterEngine:
@@ -139,13 +134,7 @@ class LawRouterEngine:
         # 디버깅 로그
         print(f"\n[라우터 판단 결과] '{mode}' (llm)\n")
 
-        if mode in {
-            ROUTE_CASE_BASED_ANSWER,
-            ROUTE_CASE_WITH_PROCEDURE,
-            ROUTE_PROCEDURE_GUIDANCE,
-            ROUTE_ALLOWANCE_CALCULATOR,
-            ROUTE_LATEST_NEWS,
-        }:
+        if mode in VALID_ROUTES:
             return mode
 
         # LLM 응답이 유효한 노드 ID가 아닐 때만 키워드 규칙으로 폴백
@@ -164,7 +153,11 @@ class LawRouterEngine:
 
         if mode == ROUTE_CASE_BASED_ANSWER:
             state = graph_answer.invoke({"question": question})
-            return RouterResult(mode=mode, content=state.get("final_answer", ""))
+            return RouterResult(
+                mode=mode,
+                content=state.get("final_answer", ""),
+                sources=format_sources(state),
+            )
 
         if mode == ROUTE_CASE_WITH_PROCEDURE:
             state = graph.invoke({"question": question})
@@ -172,37 +165,21 @@ class LawRouterEngine:
             procedure = state.get("procedure_guide", "")
             if procedure and procedure != "skip":
                 answer = f"{answer}\n\n---\n\n## 대응 절차\n\n{procedure}"
-            return RouterResult(mode=mode, content=answer)
+            return RouterResult(
+                mode=mode,
+                content=answer,
+                sources=format_sources(state),
+                procedure=procedure,
+            )
 
-        if mode == ROUTE_PROCEDURE_GUIDANCE:
-            state = graph_procedure.invoke({"question": question, "skip_rerank": True})
-            return RouterResult(mode=mode, content=state.get("procedure_guide", "skip"))
+        # ROUTE_PROCEDURE_GUIDANCE
+        state = graph_procedure.invoke({"question": question, "skip_rerank": True})
+        return RouterResult(
+            mode=mode,
+            content=state.get("procedure_guide", "skip"),
+            sources=format_sources(state),
+            procedure=state.get("procedure_guide", ""),
+        )
 
-        if mode == ROUTE_ALLOWANCE_CALCULATOR:
-            engine = CalculatorEngine()
-            res = engine.calculate(question)
-            return RouterResult(mode=mode, content=res.get("answer", ""))
-
-        # 🌟 latest_news 로직 추가
-        if mode == ROUTE_LATEST_NEWS:
-            # 1. 만약 통합된 NewsEngine 객체(프론트엔드에서 사용 중인 객체)가 있다면 그것을 사용하도록 연결 가능.
-            # 2. 여기서는 올려주신 NewsSearchTool을 직접 호출하여 답변을 구성합니다.
-            from engine.tools.news_search_tool import NewsSearchTool
-            tool = NewsSearchTool()
-            res = tool.run(query=question, display=5)
-
-            if not res.success or not res.data.get("results"):
-                content = "⚠️ 관련 최신 뉴스를 찾을 수 없습니다. 다른 검색어를 입력해 보세요."
-            else:
-                items = res.data["results"]
-                content = "📰 **관련 최신 뉴스 검색 결과입니다.**\n\n"
-                for i, item in enumerate(items, 1):
-                    # HTML 이스케이프 및 날짜 정리된 데이터 사용
-                    title = item.get("title", "제목 없음")
-                    link = item.get("link", "#")
-                    desc = item.get("description", "")
-                    content += f"**{i}. [{title}]({link})**\n> {desc}...\n\n"
-
-            return RouterResult(mode=mode, content=content)
 
 router_engine = LawRouterEngine()

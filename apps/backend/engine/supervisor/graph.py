@@ -274,10 +274,10 @@ def rag_router_node(state: SupervisorState) -> dict:
             **state.get("intermediate_results", {}),
             "rag": result.content,
         },
-        "rag_sources": [],
+        "rag_sources": result.sources,
         "log": "법률 답변 생성 완료",
         "iteration": state.get("iteration", 0) + 1,
-        "rag_procedure": "",
+        "rag_procedure": result.procedure,
     }
 
 

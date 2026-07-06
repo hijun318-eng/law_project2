@@ -19,6 +19,7 @@ RAGEngine — LangGraph 기반 법률 분석 엔진
 import time
 from engine.graph import graph
 from engine.utils.execution_logger import init_logger, get_logger, clear_logger
+from engine.utils.sources import format_sources
 
 NODE_LABELS = {
     "retrieve_precedent":        "🔍 판례 직접 검색",
@@ -151,28 +152,4 @@ class RAGEngine:
 
     def _format_sources(self, state: dict) -> list:
         """그래프 실행 결과 state에서 소스 문서 리스트를 추출"""
-        sources = []
-
-        for doc in state.get("law_docs", []):
-            m = doc.metadata
-            sources.append({
-                "type": "law",
-                "law_name": m.get("law_name", ""),
-                "article_no": m.get("article_no", ""),
-                "article_title": m.get("article_title", ""),
-                "chapter_title": m.get("chapter_title", ""),
-            })
- 
-        for doc in state.get("precedent_docs", []):
-            m = doc.metadata
-            sources.append({
-                "type": "precedent",
-                "case_no": (
-                    m.get("source_file", "")
-                    .replace(".md", "")
-                    .replace(".json", "")
-                ),
-                "category": m.get("category", ""),
-            })
- 
-        return sources
+        return format_sources(state)
