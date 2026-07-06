@@ -1,5 +1,6 @@
 import json
 
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -272,6 +273,8 @@ def prompt_api(request):
     payload = _json_payload(request)
     action = payload.get("action")
     template_id = payload.get("id")
+    user = _current_user(request) or {}
+    updated_by = user.get("name") or user.get("email") or "관리자"
 
     if action == "get":
         return JsonResponse(dashboard.get_prompt_template(template_id))
@@ -281,12 +284,18 @@ def prompt_api(request):
         return JsonResponse({"errors": errors})
 
     if action == "save":
-        dashboard.save_prompt_template(template_id, payload.get("content", ""))
-        return JsonResponse({"ok": True})
+        try:
+            dashboard.save_prompt_template(template_id, payload.get("content", ""), updated_by=updated_by)
+            return JsonResponse({"ok": True})
+        except (ObjectDoesNotExist, ValidationError, ValueError, TypeError) as exc:
+            return JsonResponse({"error": str(exc)}, status=400)
 
     if action == "rollback":
-        dashboard.rollback_prompt_template(template_id, payload.get("version"))
-        return JsonResponse({"ok": True})
+        try:
+            dashboard.rollback_prompt_template(template_id, payload.get("version"), updated_by=updated_by)
+            return JsonResponse({"ok": True})
+        except (ObjectDoesNotExist, ValidationError, ValueError, TypeError) as exc:
+            return JsonResponse({"error": str(exc)}, status=400)
 
     return JsonResponse({"error": "unknown action"}, status=400)
 

@@ -1,5 +1,6 @@
-from .mock_data import MOCK_USERS, MOCK_QUESTIONS, CATEGORY_TRENDS, CATEGORY_PIE, DAILY_DATA, PROMPT_TEMPLATES
+from .mock_data import MOCK_USERS, MOCK_QUESTIONS, CATEGORY_TRENDS, CATEGORY_PIE, DAILY_DATA
 from chat.models import ChatHistory
+from . import prompts
 
 
 def dashboard_context() -> dict:
@@ -198,49 +199,20 @@ def performance_context() -> dict:
     
 
 def prompts_context() -> dict:
-    return {"prompt_templates": list(PROMPT_TEMPLATES.values())}
+    return {"prompt_templates": prompts.list_prompt_templates()}
 
 
 def get_prompt_template(template_id: str) -> dict:
-    return PROMPT_TEMPLATES.get(template_id, {})
+    return prompts.get_prompt_template(template_id)
 
 
 def validate_prompt_content(template_id: str, content: str) -> list[str]:
-    template = PROMPT_TEMPLATES.get(template_id, {})
-    return [f"필수 플레이스홀더 {p} 가 누락되었습니다." for p in template.get("placeholders", []) if p not in content]
+    return prompts.validate_prompt_content(template_id, content)
 
 
-def save_prompt_template(template_id: str, content: str) -> None:
-    template = PROMPT_TEMPLATES.get(template_id)
-    if not template:
-        return
-    new_version = template["version"] + 1
-    template["history"].insert(0, {
-        "version": new_version,
-        "updated_at": "2026-07-02 17:30",
-        "updated_by": "관리자",
-        "summary": "내용 업데이트",
-        "content": content,
-    })
-    template["content"] = content
-    template["version"] = new_version
-    template["updated_at"] = "2026-07-02 17:30"
+def save_prompt_template(template_id: str, content: str, updated_by: str = "관리자") -> None:
+    prompts.save_prompt_template(template_id, content, updated_by=updated_by)
 
-def rollback_prompt_template(template_id: str, version) -> None:
-    template = PROMPT_TEMPLATES.get(template_id)
-    if not template:
-        return
-    match = next((v for v in template["history"] if str(v["version"]) == str(version)), None)
-    if not match:
-        return
-    new_version = template["version"] + 1
-    template["history"].insert(0, {
-        "version": new_version,
-        "updated_at": "2026-07-03 15:00",
-        "updated_by": "관리자",
-        "summary": f"v{version}으로 롤백",
-        "content": match["content"],
-    })
-    template["content"] = match["content"]
-    template["version"] = new_version
-    template["updated_at"] = "2026-07-03 15:00"
+
+def rollback_prompt_template(template_id: str, version, updated_by: str = "관리자") -> None:
+    prompts.rollback_prompt_template(template_id, version, updated_by=updated_by)

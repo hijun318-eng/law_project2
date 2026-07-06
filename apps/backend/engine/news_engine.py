@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 class NewsEngine:
     def __init__(self, llm):
         self.llm = llm
-        self.prompt = load_prompt("news_prompt.md")
         self.rewriter = NewsQueryRewriter(llm)
         self.executor = NewsExecutor()
 
@@ -29,7 +28,7 @@ class NewsEngine:
         logger.info(f"[USER QUESTION] {question} -> {rewritten_question}")
 
         tool_specs = json.dumps(registry.list_specs(), ensure_ascii=False, indent=2)
-        prompt = self.prompt.replace("{tool_specs}", tool_specs)
+        prompt = load_prompt("news_prompt.md").replace("{tool_specs}", tool_specs)
 
         messages = build_initial_messages(
             prompt,

@@ -11,10 +11,13 @@ from engine.config import llm
 from engine.calculator.tools import CALCULATOR_TOOLS
 from engine.utils.prompt_loader import load_prompt
 
-SYSTEM_PROMPT = load_prompt("calculator_prompt.md")
 
-graph = create_react_agent(
-    model=llm,
-    tools=CALCULATOR_TOOLS,
-    prompt=SYSTEM_PROMPT,
-)
+def create_calculator_graph():
+    return create_react_agent(
+        model=llm,
+        tools=CALCULATOR_TOOLS,
+        prompt=load_prompt("calculator_prompt.md"),
+    )
+
+
+graph = create_calculator_graph()

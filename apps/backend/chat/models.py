@@ -25,3 +25,46 @@ class ChatHistory(models.Model):
 
     def __str__(self):
         return f"[{self.mode}] {self.question[:50]}"
+
+
+class PromptTemplate(models.Model):
+    key = models.SlugField(max_length=80, unique=True)
+    name = models.CharField(max_length=120)
+    description = models.TextField(blank=True)
+    placeholders = models.JSONField(default=list, blank=True)
+    current_version = models.PositiveIntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["key"]
+
+    def __str__(self):
+        return f"{self.key} v{self.current_version}"
+
+
+class PromptTemplateVersion(models.Model):
+    template = models.ForeignKey(
+        PromptTemplate,
+        related_name="versions",
+        on_delete=models.CASCADE,
+    )
+    version = models.PositiveIntegerField()
+    content = models.TextField()
+    summary = models.CharField(max_length=200, blank=True)
+    created_by = models.CharField(max_length=120, default="system")
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_current = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-version"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["template", "version"],
+                name="unique_prompt_template_version",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.template.key} v{self.version}"

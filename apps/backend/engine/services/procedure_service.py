@@ -9,7 +9,7 @@ from engine.utils.prompt_loader import load_prompt
 class ProcedureService:
 
     def __init__(self):
-        self.prompt_template = load_prompt("procedure_prompt.md")
+        pass
 
     def generate(self, used_precedents: list[str]) -> str:
 
@@ -44,7 +44,7 @@ class ProcedureService:
         if not info:
             return f"{category} 카테고리에 대한 절차 정보가 없습니다."
 
-        prompt = self.prompt_template.format(
+        prompt = load_prompt("procedure_prompt.md").format(
             category=category,
             agency=info["agency"],
             worker_actions="\n".join(f"- {a}" for a in info["worker_actions"]),

@@ -9,14 +9,14 @@ CalculatorEngine — LangGraph ReAct 기반 계산기 엔진
 """
 from typing import Optional
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
-from engine.calculator.graph import graph
+from engine.calculator.graph import create_calculator_graph
 
 
 class CalculatorEngine:
     """계산기 ReAct 엔진 (LangGraph ReAct 기반)"""
 
     def __init__(self):
-        self.graph = graph
+        self.graph = create_calculator_graph()
 
     def calculate(
         self, query: str, conversation_history: Optional[list] = None

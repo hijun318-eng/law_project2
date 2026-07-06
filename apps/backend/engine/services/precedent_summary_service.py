@@ -10,9 +10,6 @@ class PrecedentSummaryService:
 
     def __init__(self):
         self.cache = {}
-        self.prompt_template = load_prompt(
-            "precedent_summary_prompt.md"
-        )
 
     def make_dual_summary(
         self,
@@ -34,7 +31,7 @@ class PrecedentSummaryService:
                 )
             )
 
-        prompt = self.prompt_template.format(
+        prompt = load_prompt("precedent_summary_prompt.md").format(
             content=content[:30000],
             category=category
         )

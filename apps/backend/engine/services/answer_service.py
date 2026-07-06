@@ -8,7 +8,7 @@ from pathlib import Path
 class AnswerService:
 
     def __init__(self):
-        self.prompt_template = load_prompt("answer_prompt.md")
+        pass
 
     def generate(self, law_analysis, precedent_docs, question, law_source: str = "unknown"):
 
@@ -20,7 +20,8 @@ class AnswerService:
             for doc in precedent_docs
         )
 
-        prompt = Template(self.prompt_template).safe_substitute(
+        prompt_template = load_prompt("answer_prompt.md")
+        prompt = Template(prompt_template).safe_substitute(
             law_context=law_context,
             precedent_context=precedent_context,
             question=question,
