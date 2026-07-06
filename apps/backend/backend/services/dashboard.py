@@ -203,8 +203,8 @@ def _short_date(raw_date):
  
  
 def feedback_context() -> dict:
-    # feedback이 있고 category가 빈 문자열이 아닌 레코드만 집계
-    base_qs = ChatHistory.objects.filter(feedback__isnull=False).exclude(category__exact="")
+    # feedback이 있는 모든 레코드를 집계 (category가 비어 있으면 '미분류'로 묶어서 표시)
+    base_qs = ChatHistory.objects.filter(feedback__isnull=False)
 
     # 카테고리별 likes/dislikes 집계
     cat_agg = (
@@ -244,7 +244,8 @@ def feedback_context() -> dict:
     score_ranking = []
 
     for cat_row in cat_agg:
-        category = cat_row["category"]
+        raw_category = cat_row["category"]
+        category = raw_category or "미분류"
         likes = cat_row["likes"] or 0
         dislikes = cat_row["dislikes"] or 0
 
@@ -258,7 +259,7 @@ def feedback_context() -> dict:
         low_count = dislikes
 
         # 일별 트렌드
-        daily_items = sorted(daily_by_cat.get(category, {}).items())
+        daily_items = sorted(daily_by_cat.get(raw_category, {}).items())
         max_count = max(
             [v["likes"] for _, v in daily_items]
             + [v["dislikes"] for _, v in daily_items]
