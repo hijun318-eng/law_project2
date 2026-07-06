@@ -376,6 +376,7 @@ def advice_api(request):
         answer = result.content
         chat.mode = result.mode
         chat.category = result.category
+        chat.sources = result.sources
     except Exception as e:
         answer = f"오류 발생: {str(e)}"
     finally:
