@@ -90,6 +90,7 @@ def login_view(request):
                 "name": user.first_name,
                 "email": user.username,
                 "role": "admin" if user.is_staff else "user",
+                "join_date": user.date_joined.strftime("%Y-%m-%d"),
             }
             return redirect("admin_console") if user.is_staff else redirect("landing")
 
@@ -141,6 +142,7 @@ def register_view(request):
             "name": user.first_name,
             "email": user.username,
             "role": "user",
+            "join_date": user.date_joined.strftime("%Y-%m-%d"),
         }
         return redirect("landing")
 
@@ -157,6 +159,13 @@ def user_app(request):
     user = _current_user(request)
     if not user:
         return redirect("login")
+    # 세션에 가입일이 없으면 DB에서 조회 (기존 로그인 사용자 대응)
+    if "join_date" not in user:
+        try:
+            db_user = User.objects.get(username=user["email"])
+            user["join_date"] = db_user.date_joined.strftime("%Y-%m-%d")
+        except User.DoesNotExist:
+            pass
     page = request.GET.get("page", "home")
     if page not in {"home", "calculator", "news", "mypage"}:
         page = "home"
