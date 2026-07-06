@@ -79,46 +79,66 @@ def _short_date(raw_date):
  
  
 def feedback_context() -> dict:
-    by_category = defaultdict(lambda: {
-        "likes": 0, "dislikes": 0, "items": [],
-        "daily": defaultdict(lambda: {"likes": 0, "dislikes": 0}),
-    })
- 
+    # feedback이 있고 category가 빈 문자열이 아닌 레코드만 집계
+    base_qs = ChatHistory.objects.filter(feedback__isnull=False).exclude(category__exact="")
+
+    # 카테고리별 likes/dislikes 집계
+    cat_agg = (
+        base_qs
+        .values("category")
+        .annotate(
+            likes=Count("pk", filter=Q(feedback=True)),
+            dislikes=Count("pk", filter=Q(feedback=False)),
+        )
+    )
+
+    # 일별 트렌드 (TruncDay로 날짜 단위 집계)
+    daily_qs = (
+        base_qs
+        .annotate(day=TruncDay("created_at"))
+        .values("category", "day")
+        .annotate(
+            likes=Count("pk", filter=Q(feedback=True)),
+            dislikes=Count("pk", filter=Q(feedback=False)),
+        )
+        .order_by("day")
+    )
+
+    # daily_qs를 카테고리별·일별로 그룹핑
+    daily_by_cat: dict[str, dict[str, dict[str, int]]] = defaultdict(
+        lambda: defaultdict(lambda: {"likes": 0, "dislikes": 0})
+    )
+    for row in daily_qs:
+        cat = row["category"]
+        day = row["day"].strftime("%m-%d") if row["day"] else None
+        if day:
+            daily_by_cat[cat][day]["likes"] += row["likes"]
+            daily_by_cat[cat][day]["dislikes"] += row["dislikes"]
+
     total_likes = 0
     total_dislikes = 0
- 
-    for raw in MOCK_QUESTIONS:
-        category = raw.get("category") or "미분류"  # 카테고리 누락 -> "미분류"
-        likes = _safe_int(raw.get("likes"))
-        dislikes = _safe_int(raw.get("dislikes"))
- 
+    score_ranking = []
+
+    for cat_row in cat_agg:
+        category = cat_row["category"]
+        likes = cat_row["likes"] or 0
+        dislikes = cat_row["dislikes"] or 0
+
         total_likes += likes
         total_dislikes += dislikes
- 
-        bucket = by_category[category]
-        bucket["likes"] += likes
-        bucket["dislikes"] += dislikes
-        bucket["items"].append(raw)
- 
-        date_key = _short_date(raw.get("date"))
-        if date_key:  # 날짜 없으면 일별 차트 집계에서만 제외, 요약 통계에는 포함
-            bucket["daily"][date_key]["likes"] += likes
-            bucket["daily"][date_key]["dislikes"] += dislikes
- 
-    score_ranking = []
- 
-    for category, bucket in by_category.items():
-        avg_score = _score(bucket["likes"], bucket["dislikes"])
+
+        avg_score = _score(likes, dislikes)
         needs_attention = avg_score < LOW_SCORE_THRESHOLD
- 
-        low_count = sum(
-            1 for item in bucket["items"]
-            if _score(_safe_int(item.get("likes")), _safe_int(item.get("dislikes"))) < LOW_SCORE_THRESHOLD
-        )
- 
-        daily_items = sorted(bucket["daily"].items())  # 날짜 오름차순
+
+        # low_count: 해당 카테고리 내 feedback=False(싫어요) 레코드 수 = dislikes
+        low_count = dislikes
+
+        # 일별 트렌드
+        daily_items = sorted(daily_by_cat.get(category, {}).items())
         max_count = max(
-            [v["likes"] for _, v in daily_items] + [v["dislikes"] for _, v in daily_items] + [1]
+            [v["likes"] for _, v in daily_items]
+            + [v["dislikes"] for _, v in daily_items]
+            + [1]
         )
         daily_trend = [
             {
@@ -130,28 +150,28 @@ def feedback_context() -> dict:
             }
             for date, v in daily_items
         ]
- 
+
         score_ranking.append({
             "category": category,
             "avg_score": avg_score,
-            "likes": bucket["likes"],
-            "dislikes": bucket["dislikes"],
+            "likes": likes,
+            "dislikes": dislikes,
             "needs_attention": needs_attention,
             "low_count": low_count,
             "daily_trend": daily_trend,
         })
- 
+
     # 만족도 낮은 순 정렬(개선 우선순위) + 순위 부여
     score_ranking.sort(key=lambda x: x["avg_score"])
     for i, entry in enumerate(score_ranking, start=1):
         entry["rank"] = i
- 
+
     # 카테고리 아코디언 목록도 동일 순서(낮은 만족도 우선) 사용
     category_groups = score_ranking
- 
+
     low_category_count = sum(1 for e in category_groups if e["needs_attention"])
     # 개선 대상 없음 -> "개선 필요 (0)"으로 정상 표시 (low_category_count = 0)
- 
+
     return {
         "total_likes": total_likes,
         "total_dislikes": total_dislikes,
