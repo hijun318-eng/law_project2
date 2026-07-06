@@ -16,11 +16,12 @@ from dataclasses import dataclass
 
 from engine.config import llm
 from engine.calculator_engine import CalculatorEngine
-from engine.graph import graph_answer, graph_procedure
+from engine.graph import graph, graph_answer, graph_procedure
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 ROUTE_CASE_BASED_ANSWER = "case_based_answer"
+ROUTE_CASE_WITH_PROCEDURE = "case_with_procedure"
 ROUTE_PROCEDURE_GUIDANCE = "procedure_guidance"
 ROUTE_ALLOWANCE_CALCULATOR = "allowance_calculator"
 # 🌟 최신 뉴스 검색 모드 추가
@@ -88,8 +89,43 @@ class LawRouterEngine:
         )
         return any(keyword in q for keyword in procedure_keywords)
 
+    @staticmethod
+    def _has_case_context(question: str) -> bool:
+        q = question.replace(" ", "").lower()
+        case_keywords = (
+            "사례",
+            "상황",
+            "내경우",
+            "제경우",
+            "이런경우",
+            "이런상황",
+            "회사에서",
+            "사장이",
+            "대표가",
+            "상사가",
+            "갑자기",
+            "통보",
+            "해고",
+            "못받",
+            "안줍",
+            "안주",
+            "일했는데",
+            "했는데",
+            "당했",
+            "라고했",
+            "라고합니다",
+            "부당",
+            "불법",
+            "가능한가",
+            "맞나요",
+        )
+        return any(keyword in q for keyword in case_keywords)
+
     def route(self, question: str) -> str:
         if self._is_explicit_procedure_request(question):
+            if self._has_case_context(question):
+                print(f"\n[라우터 판단 결과] '{ROUTE_CASE_WITH_PROCEDURE}' (rule)\n", flush=True)
+                return ROUTE_CASE_WITH_PROCEDURE
             print(f"\n[라우터 판단 결과] '{ROUTE_PROCEDURE_GUIDANCE}' (rule)\n", flush=True)
             return ROUTE_PROCEDURE_GUIDANCE
 
@@ -110,6 +146,7 @@ class LawRouterEngine:
 
         if mode in {
             ROUTE_CASE_BASED_ANSWER,
+            ROUTE_CASE_WITH_PROCEDURE,
             ROUTE_PROCEDURE_GUIDANCE,
             ROUTE_ALLOWANCE_CALCULATOR,
             ROUTE_LATEST_NEWS,  # 허용 목록에 추가
@@ -123,6 +160,14 @@ class LawRouterEngine:
         if mode == ROUTE_CASE_BASED_ANSWER:
             state = graph_answer.invoke({"question": question})
             return RouterResult(mode=mode, content=state.get("final_answer", ""))
+
+        if mode == ROUTE_CASE_WITH_PROCEDURE:
+            state = graph.invoke({"question": question})
+            answer = state.get("final_answer", "")
+            procedure = state.get("procedure_guide", "")
+            if procedure and procedure != "skip":
+                answer = f"{answer}\n\n---\n\n## 대응 절차\n\n{procedure}"
+            return RouterResult(mode=mode, content=answer)
 
         if mode == ROUTE_PROCEDURE_GUIDANCE:
             state = graph_procedure.invoke({"question": question})
