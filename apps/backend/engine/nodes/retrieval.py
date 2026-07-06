@@ -2,6 +2,7 @@ from pathlib import Path
 import re
 import requests
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,14 @@ def retrieve_precedent_node(state: GraphState) -> dict:
         for doc in unique
     ]
     documents_for_rerank = [p[1] for p in pairs]
+    ranker_started_at = time.perf_counter()
     scores = _call_ranker(question, documents_for_rerank) if documents_for_rerank else []
+    ranker_elapsed = time.perf_counter() - ranker_started_at
+    logger.warning(
+        "ranker timing: docs=%s elapsed_seconds=%.3f",
+        len(documents_for_rerank),
+        ranker_elapsed,
+    )
 
     reranked = sorted(zip(unique, scores), key=lambda x: x[1], reverse=True)
 
