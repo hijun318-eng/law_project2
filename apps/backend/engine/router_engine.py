@@ -7,7 +7,7 @@ engine/router_engine.py
 1) case_based_answer: 유사 법률/판례 추출 + 최종 답변 생성 (graph_answer)
 2) procedure_guidance: 대응 절차 안내만 생성 (graph_procedure)
 3) allowance_calculator: 수당 계산 (CalculatorEngine)
-4) latest_news: 최신 노동법/판결 뉴스 검색 (NewsSearchTool / NewsEngine)
+4) latest_news: 최신 노동법/판결 뉴스 검색 (NewsEngine)
 """
 
 from __future__ import annotations
@@ -135,25 +135,10 @@ class LawRouterEngine:
                 result = RouterResult(mode=mode, content=res.get("answer", ""))
 
             elif mode == ROUTE_LATEST_NEWS:
-                # 1. 만약 통합된 NewsEngine 객체(프론트엔드에서 사용 중인 객체)가 있다면 그것을 사용하도록 연결 가능.
-                # 2. 여기서는 올려주신 NewsSearchTool을 직접 호출하여 답변을 구성합니다.
-                from engine.tools.news_search_tool import NewsSearchTool
-                tool = NewsSearchTool()
-                res = tool.run(query=question, display=5)
-
-                if not res.success or not res.data.get("results"):
-                    content = "⚠️ 관련 최신 뉴스를 찾을 수 없습니다. 다른 검색어를 입력해 보세요."
-                else:
-                    items = res.data["results"]
-                    content = "📰 **관련 최신 뉴스 검색 결과입니다.**\n\n"
-                    for i, item in enumerate(items, 1):
-                        # HTML 이스케이프 및 날짜 정리된 데이터 사용
-                        title = item.get("title", "제목 없음")
-                        link = item.get("link", "#")
-                        desc = item.get("description", "")
-                        content += f"**{i}. [{title}]({link})**\n> {desc}...\n\n"
-
-                result = RouterResult(mode=mode, content=content)
+                from engine.news_engine import NewsEngine
+                news_engine = NewsEngine(self._llm)
+                res = news_engine.answer(question)
+                result = RouterResult(mode=mode, content=res.get("answer", ""))
 
             return result
         finally:
