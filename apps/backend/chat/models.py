@@ -16,6 +16,7 @@ class ChatHistory(models.Model):
     answer = models.TextField()
     mode = models.CharField(max_length=20, choices=MODE_CHOICES, default='rag')
     sources = models.JSONField(default=list, blank=True)
+    category = models.CharField(max_length=50, blank=True, default="")
     feedback = models.BooleanField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
