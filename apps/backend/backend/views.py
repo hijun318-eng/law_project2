@@ -371,6 +371,7 @@ def advice_api(request):
         result = router_engine.run(question, session_id=str(chat.id))
         answer = result.content
         chat.mode = result.mode
+        chat.category = result.category
     except Exception as e:
         answer = f"오류 발생: {str(e)}"
     finally:

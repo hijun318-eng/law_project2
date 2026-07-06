@@ -57,6 +57,7 @@ SYSTEM_PROMPT = """
 class RouterResult:
     mode: str
     content: str
+    category: str = ""
 
 
 class LawRouterEngine:
@@ -88,6 +89,17 @@ class LawRouterEngine:
             return mode
         return ROUTE_CASE_BASED_ANSWER
 
+    @staticmethod
+    def _extract_category(state: dict) -> str:
+        """GraphState에서 precedent_context_docs의 category를 추출합니다."""
+        docs = state.get("precedent_context_docs", [])
+        if not docs:
+            return ""
+        doc = docs[0]
+        if not hasattr(doc, "metadata"):
+            return ""
+        return doc.metadata.get("category", "")
+
     def run(self, question: str, session_id: str | None = None) -> RouterResult:
         mode = self.route(question)
 
@@ -101,11 +113,13 @@ class LawRouterEngine:
         try:
             if mode == ROUTE_CASE_BASED_ANSWER:
                 state = graph_answer.invoke({"question": question})
-                result = RouterResult(mode=mode, content=state.get("final_answer", ""))
+                category = self._extract_category(state)
+                result = RouterResult(mode=mode, content=state.get("final_answer", ""), category=category)
 
             elif mode == ROUTE_PROCEDURE_GUIDANCE:
                 state = graph_procedure.invoke({"question": question})
-                result = RouterResult(mode=mode, content=state.get("procedure_guide", "skip"))
+                category = self._extract_category(state)
+                result = RouterResult(mode=mode, content=state.get("procedure_guide", "skip"), category=category)
 
             elif mode == ROUTE_ALLOWANCE_CALCULATOR:
                 engine = CalculatorEngine()
