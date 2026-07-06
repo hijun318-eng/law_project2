@@ -5,7 +5,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def _call_ranker(query: str, documents: list[str], timeout: int = 30) -> list[float]:
+def _call_ranker(query: str, documents: list[str], timeout: int = 600) -> list[float]:
     """랭커 마이크로서비스를 HTTP로 호출. 실패 시 균등 점수 fallback."""
     try:
         from django.conf import settings
