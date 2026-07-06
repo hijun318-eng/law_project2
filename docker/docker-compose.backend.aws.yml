@@ -19,5 +19,5 @@ services:
       [
         "sh",
         "-c",
-        "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2 --timeout 600"
+        "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2 --timeout 600 --access-logfile - --error-logfile - --capture-output"
       ]

@@ -351,6 +351,7 @@ def advice_api(request):
                     "total": query_logger.total_elapsed(),
                     "nodes": query_logger.nodes,
                 },
+                flush=True,
             )
             query_logger.save()
         clear_logger()
