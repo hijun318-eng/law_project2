@@ -23,8 +23,5 @@ urlpatterns = [
     path("api/calculate/", views.calculate_api, name="calculate_api"),
     path("api/news/", views.news_api, name="news_api"),
     path("api/prompts/", views.prompt_api, name="prompt_api"),
-    path("chat/", include("chat.urls")),
-    path("calculator/", include("calculator.urls")),
-    path("news/", include("news.urls")),
-    path("home/", include("home.urls")),
+
 ]
