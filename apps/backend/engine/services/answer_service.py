@@ -28,7 +28,26 @@ class AnswerService:
             law_source=law_source,
         )
 
-        answer = llm.invoke(prompt).content
+        response = llm.invoke(prompt)
+        token_usage = getattr(response, 'response_metadata', {}).get('token_usage', {})
+        prompt_tokens = token_usage.get('prompt_tokens', 0)
+        completion_tokens = token_usage.get('completion_tokens', 0)
+        total_tokens = token_usage.get('total_tokens', 0)
+
+        # QueryLogger에 LLM 사용량 기록
+        from engine.utils.execution_logger import get_logger
+        logger = get_logger()
+        if logger:
+            logger.record_llm_usage(
+                node_name="generate_answer",
+                model="gpt-4o-mini",
+                call_type="llm",
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens,
+            )
+
+        answer = response.content
 
         return {
             "final_answer": answer,
