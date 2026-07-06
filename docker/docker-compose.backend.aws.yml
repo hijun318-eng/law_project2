@@ -10,6 +10,7 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=backend.settings
       - DEBUG=False
+      - RANKER_TIMEOUT_SECONDS=30
     volumes:
       - ../vector_db:/app/vector_db
       - ../data:/app/data:ro

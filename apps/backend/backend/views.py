@@ -13,6 +13,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from django.contrib.auth.models import User
 
 from chat.models import ChatHistory
+from engine.utils.execution_logger import clear_logger, get_logger, init_logger
 
 news_search_tool = NewsSearchTool()
 
@@ -334,12 +335,25 @@ def advice_api(request):
 
     answer = ""
     try:
+        init_logger(question)
         result = router_engine.run(question)
         answer = result.content
         chat.mode = result.mode
     except Exception as e:
         answer = f"오류 발생: {str(e)}"
     finally:
+        query_logger = get_logger()
+        if query_logger:
+            query_logger.finish(answer)
+            print(
+                "[advice_api timing]",
+                {
+                    "total": query_logger.total_elapsed(),
+                    "nodes": query_logger.nodes,
+                },
+            )
+            query_logger.save()
+        clear_logger()
         chat.answer = answer
         chat.save()
 

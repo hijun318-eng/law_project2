@@ -5,23 +5,29 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def _call_ranker(query: str, documents: list[str], timeout: int = 600) -> list[float]:
+def _call_ranker(query: str, documents: list[str], timeout: int | None = None) -> list[float]:
     """랭커 마이크로서비스를 HTTP로 호출. 실패 시 균등 점수 fallback."""
     try:
         from django.conf import settings
         ranker_url = settings.RANKER_URL
+        timeout = timeout or getattr(settings, "RANKER_TIMEOUT_SECONDS", 30)
     except (ImportError, AttributeError):
         ranker_url = 'http://localhost:8001'
+        timeout = timeout or 30
 
     try:
         resp = requests.post(
             f'{ranker_url}/rerank/',
             json={'query': query, 'documents': documents},
-            timeout=timeout,
+            timeout=(5, timeout),
         )
         resp.raise_for_status()
         data = resp.json()
-        return data.get('scores', [])
+        scores = data.get('scores', [])
+        if len(scores) != len(documents):
+            logger.warning("ranker score count mismatch: expected=%s actual=%s", len(documents), len(scores))
+            return [0.5] * len(documents)
+        return scores
     except requests.RequestException as e:
         logger.warning(f'랭커 호출 실패: {e}')
         return [0.5] * len(documents)

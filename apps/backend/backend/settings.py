@@ -29,6 +29,7 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
 RANKER_URL = config('RANKER_URL', default='http://localhost:8001')
+RANKER_TIMEOUT_SECONDS = config('RANKER_TIMEOUT_SECONDS', default=30, cast=int)
 
 
 # Application definition
