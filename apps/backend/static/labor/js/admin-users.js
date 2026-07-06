@@ -19,7 +19,6 @@ function filterUsers() {
 
 function exportUsersCSV() {
     const rows = document.querySelectorAll("[data-user-row]:not([hidden])");
-    if (rows.length === 0) return;
 
     const headers = ["이름", "이메일", "가입일", "마지막 접속", "질문 수", "상태"];
     const csvRows = Array.from(rows).map((row) => {
