@@ -54,7 +54,8 @@ def retrieve_precedent_node(state: GraphState) -> dict:
         (question, doc.metadata.get("llm_brief", "") or doc.page_content[:1000])
         for doc in unique
     ]
-    scores = _call_ranker(question, [p[1] for p in pairs])
+    documents_for_rerank = [p[1] for p in pairs]
+    scores = _call_ranker(question, documents_for_rerank) if documents_for_rerank else []
 
     reranked = sorted(zip(unique, scores), key=lambda x: x[1], reverse=True)
 
