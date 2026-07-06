@@ -1,4 +1,6 @@
-from .mock_data import MOCK_USERS, MOCK_QUESTIONS, CATEGORY_TRENDS, CATEGORY_PIE, DAILY_DATA
+from django.contrib.auth.models import User
+
+from .mock_data import MOCK_QUESTIONS, CATEGORY_TRENDS, CATEGORY_PIE, DAILY_DATA
 from chat.models import ChatHistory
 from django.db.models import Avg, Max, Count, Sum, Q
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth
@@ -21,7 +23,8 @@ def dashboard_context() -> dict:
             "bar_width": round(abs(change) / max_abs_change * 45, 1),
         })
 
-    active_users = sum(1 for user in MOCK_USERS if user["status"] == "active")
+    active_users = User.objects.filter(is_active=True).count()
+    total_users = User.objects.count()
 
     # 피드백 관리 화면과 동일한 카테고리 집계를 재사용
     feedback_groups = feedback_context()["category_groups"]
@@ -38,15 +41,21 @@ def dashboard_context() -> dict:
         "categories": CATEGORY_PIE,
         "category_trends": trends,
         "low_feedback": low_feedback,
-        "total_users": len(MOCK_USERS),
+        "total_users": total_users,
         "active_users": active_users,
-        "suspended_users": len(MOCK_USERS) - active_users,
+        "suspended_users": total_users - active_users,
     }
 
 
 def users_context() -> dict:
-    active_count = sum(1 for user in MOCK_USERS if user["status"] == "active")
-    return {"users": MOCK_USERS, "active_count": active_count, "suspended_count": len(MOCK_USERS) - active_count}
+    users = User.objects.all().annotate(questions=Count('chathistory_set'))
+    active_count = users.filter(is_active=True).count()
+    total_count = users.count()
+    return {
+        "users": users,
+        "active_count": active_count,
+        "suspended_count": total_count - active_count,
+    }
 
 from collections import defaultdict
 from datetime import datetime

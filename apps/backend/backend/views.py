@@ -242,15 +242,16 @@ def admin_console(request):
 def admin_toggle_user_status(request):
     payload = _json_payload(request)
     user_id = payload.get("user_id")
-    new_status = payload.get("status")  # "active" 또는 "suspended"
+    is_active = payload.get("is_active")  # boolean
 
-    from .services.dashboard import MOCK_USERS
-    for user in MOCK_USERS:
-        if user["id"] == user_id:
-            user["status"] = new_status
-            return JsonResponse({"ok": True, "user_id": user_id, "status": new_status})
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
 
-    return JsonResponse({"error": "User not found"}, status=404)
+    user.is_active = is_active
+    user.save(update_fields=["is_active"])
+    return JsonResponse({"ok": True, "user_id": user_id, "is_active": user.is_active})
 
 
 @require_POST
