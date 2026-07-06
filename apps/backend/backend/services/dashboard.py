@@ -240,6 +240,9 @@ def _get_slow_queries() -> list:
         .filter(total_ms__gte=10.0)
         .order_by('-total_ms')[:5]
     )
+    # 막대 너비용 최댓값
+    all_durations = [row['total_ms'] for row in slow_sessions]
+    max_duration = max(all_durations) if all_durations else 1
     result = []
     for row in slow_sessions:
         total_sec = round(row['total_ms'], 1)
@@ -252,11 +255,9 @@ def _get_slow_queries() -> list:
         )
         bottleneck = bottleneck_row.node_name if bottleneck_row else 'unknown'
         result.append({
-            "question": row['session_id'],
-            "user": "",
+            "bottleneck_label": bottleneck.replace('_', ' '),
+            "load_percent": round(row['total_ms'] / max_duration * 100),
             "duration_sec": total_sec,
-            "bottleneck": bottleneck,
-            "date": "",
         })
     return result
 
@@ -301,7 +302,7 @@ def performance_context() -> dict:
         "llm_usage": [],
         "total_calls": total_calls,
         "total_tokens": f"{total_tokens:,}",
-        "total_cost": total_cost,
+        "total_cost": f"{total_cost:.6f}",
         "slow_queries": slow_queries,
     }
 

@@ -75,15 +75,15 @@ export function initAdminPerformance() {
         `).join("");
     };
 
-    const renderBottleneck = (nodes) => {
+    const renderBottleneck = (items) => {
         const box = section.querySelector("#perfBottleneck");
         if (!box) return;
-        if (!nodes || nodes.length === 0) {
+        if (!items || items.length === 0) {
             renderEmpty(box, "표시할 병목 데이터가 없습니다.");
             return;
         }
-        box.innerHTML = nodes.map((node) => `
-            <div class="bottleneck-row"><span>${node.label}</span><i style="width: ${node.load_percent}%"></i><b>${node.calls}</b></div>
+        box.innerHTML = items.map((item) => `
+            <div class="bottleneck-row"><span>${item.bottleneck_label}</span><i style="width: ${item.load_percent}%"></i><b>${item.duration_sec}s</b></div>
         `).join("");
     };
 
@@ -106,7 +106,7 @@ export function initAdminPerformance() {
             renderNodeCards(data.langgraph_nodes);
             renderStatGrid(data);
             renderChart(data.llm_usage);
-            renderBottleneck(data.langgraph_nodes);
+            renderBottleneck(data.slow_queries);
             hideStatus();
         } catch (err) {
             if (token !== requestToken) return;

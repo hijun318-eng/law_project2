@@ -58,8 +58,8 @@
         <article class="panel">
             <h2>병목 노드 TOP</h2>
             <div id="perfBottleneck">
-                {% for node in langgraph_nodes %}
-                <div class="bottleneck-row"><span>{{ node.label }}</span><i style="width: {{ node.load_percent }}%"></i><b>{{ node.calls }}</b></div>
+                {% for item in slow_queries %}
+                <div class="bottleneck-row"><span>{{ item.bottleneck_label }}</span><i style="width: {{ item.load_percent }}%"></i><b>{{ item.duration_sec }}s</b></div>
                 {% empty %}
                 <p class="perf-empty">표시할 병목 데이터가 없습니다.</p>
                 {% endfor %}
