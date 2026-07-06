@@ -4,7 +4,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods, require_POST
 
 from .services import calculator, dashboard
 from engine.router_engine import router_engine
@@ -13,6 +13,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from django.contrib.auth.models import User
 
 from chat.models import ChatHistory
+from monitoring.models import PriceConfig
 
 news_search_tool = NewsSearchTool()
 
@@ -267,20 +268,53 @@ def admin_reprocess_failed(request):
 
 
 def admin_performance_data(request):
-    from .services.dashboard import performance_context
+    from .services.dashboard import performance_context, _get_period_usage
     data = performance_context()
     period = request.GET.get("period", "day")
-    if period == "week":
-        data["llm_usage"] = [
-            {"date": "06-23", "calls": 980, "calls_height": 85, "emb_calls_height": 50},
-            {"date": "06-24", "calls": 1050, "calls_height": 90, "emb_calls_height": 55},
-        ]
-    elif period == "month":
-        data["llm_usage"] = [
-            {"date": "06-01", "calls": 4200, "calls_height": 95, "emb_calls_height": 60},
-            {"date": "06-15", "calls": 3800, "calls_height": 85, "emb_calls_height": 50},
-        ]
+    data["llm_usage"] = _get_period_usage(period)
     return JsonResponse(data)
+
+
+@require_http_methods(["GET", "POST"])
+def admin_price_config(request):
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({"error": "Unauthorized"}, status=403)
+
+    if request.method == "GET":
+        configs = PriceConfig.objects.all().values(
+            "id", "model_name", "prompt_token_price", "completion_token_price"
+        )
+        return JsonResponse(list(configs), safe=False)
+
+    # POST
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    model_name = data.get("model_name", "").strip()
+    if not model_name:
+        return JsonResponse({"error": "model_name is required"}, status=400)
+
+    try:
+        prompt_price = float(data.get("prompt_token_price", 0))
+        completion_price = float(data.get("completion_token_price", 0))
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Prices must be numbers"}, status=400)
+
+    if prompt_price < 0 or completion_price < 0:
+        return JsonResponse({"error": "Prices cannot be negative"}, status=400)
+
+    user_name = request.user.get_full_name() or request.user.username or "admin"
+    PriceConfig.objects.update_or_create(
+        model_name=model_name,
+        defaults={
+            "prompt_token_price": prompt_price,
+            "completion_token_price": completion_price,
+            "updated_by": user_name,
+        }
+    )
+    return JsonResponse({"ok": True})
 
 
 @require_POST
@@ -334,7 +368,7 @@ def advice_api(request):
 
     answer = ""
     try:
-        result = router_engine.run(question)
+        result = router_engine.run(question, session_id=str(chat.id))
         answer = result.content
         chat.mode = result.mode
     except Exception as e:
