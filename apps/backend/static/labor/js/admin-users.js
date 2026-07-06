@@ -17,6 +17,35 @@ function filterUsers() {
     if (emptyRow) emptyRow.hidden = visibleCount > 0;
 }
 
+function exportUsersCSV() {
+    const rows = document.querySelectorAll("[data-user-row]:not([hidden])");
+    if (rows.length === 0) return;
+
+    const headers = ["이름", "이메일", "가입일", "마지막 접속", "질문 수", "상태"];
+    const csvRows = Array.from(rows).map((row) => {
+        const cells = row.querySelectorAll("td");
+        const name = cells[0]?.querySelector("strong")?.textContent || "";
+        const email = cells[0]?.querySelector("small")?.textContent || "";
+        const joinDate = cells[1]?.textContent.trim() || "";
+        const lastLogin = cells[2]?.textContent.trim() || "";
+        const questions = cells[3]?.textContent.trim() || "0";
+        const status = cells[4]?.querySelector(".status")?.textContent.trim() || "";
+        return [name, email, joinDate, lastLogin, questions, status]
+            .map((v) => `"${v.replace(/"/g, '""')}"`)
+            .join(",");
+    });
+
+    const csvContent = "\ufeff" + headers.join(",") + "\n" + csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `users_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+}
+
 function showUserError(message) {
     const box = document.querySelector("[data-user-error]");
     if (!box) return;
@@ -32,6 +61,7 @@ function hideUserError() {
 export function initAdminUsers() {
     document.querySelector("[data-user-search]")?.addEventListener("input", filterUsers);
     document.querySelector("[data-user-status]")?.addEventListener("change", filterUsers);
+    document.querySelector(".page-head .secondary-button")?.addEventListener("click", exportUsersCSV);
 
     document.querySelectorAll("[data-toggle-status]").forEach((button) => button.addEventListener("click", () => {
         if (button.disabled) return;
@@ -49,7 +79,7 @@ export function initAdminUsers() {
         hideUserError();
         button.disabled = true; // 중복 클릭 방지
 
-        postJson("/api/admin/users/toggle-status/", { user_id: userId, status: nextStatus })
+        postJson("/api/admin/users/toggle-status/", { user_id: userId, is_active: nextStatus === "active" })
             .then(() => {
                 // 서버 응답 성공 시에만 UI 업데이트
                 row.dataset.status = nextStatus;

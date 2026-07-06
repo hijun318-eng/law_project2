@@ -21,13 +21,13 @@
         </thead>
         <tbody>
             {% for row in users %}
-            <tr data-user-row data-user-id="{{ row.id }}" data-status="{{ row.status }}">
-                <td><strong>{{ row.name }}</strong><small>{{ row.email }}</small></td>
-                <td>{{ row.join_date }}</td>
-                <td>{{ row.last_login }}</td>
+            <tr data-user-row data-user-id="{{ row.id }}" data-status="{% if row.is_active %}active{% else %}suspended{% endif %}">
+                <td><strong>{{ row.first_name }}</strong><small>{{ row.email }}</small></td>
+                <td>{{ row.date_joined|date:"Y-m-d" }}</td>
+                <td>{{ row.last_login|date:"Y-m-d"|default:"-" }}</td>
                 <td>{{ row.questions }}</td>
-                <td><span class="status {{ row.status }}">{% if row.status == 'active' %}활성{% else %}정지{% endif %}</span></td>
-                <td><button class="mini-button" data-toggle-status>{% if row.status == 'active' %}계정 정지{% else %}정지 해제{% endif %}</button></td>
+                <td><span class="status {% if row.is_active %}active{% else %}suspended{% endif %}">{% if row.is_active %}활성{% else %}정지{% endif %}</span></td>
+                <td><button class="mini-button" data-toggle-status>{% if row.is_active %}계정 정지{% else %}정지 해제{% endif %}</button></td>
             </tr>
             {% endfor %}
             <tr data-user-empty hidden>
