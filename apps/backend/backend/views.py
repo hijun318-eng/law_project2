@@ -2,7 +2,7 @@ import json
 
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.http import HttpResponseForbidden, JsonResponse
+from django.http import HttpResponseForbidden, JsonResponse, StreamingHttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
@@ -372,6 +372,10 @@ def prompt_api(request):
 
     return JsonResponse({"error": "unknown action"}, status=400)
 
+def _sse(data: dict) -> str:
+    return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
 @require_POST
 def advice_api(request):
     payload = _json_payload(request)
@@ -390,35 +394,54 @@ def advice_api(request):
         user=user,
     )
 
-    answer = ""
-    try:
-        init_logger(question)
-        result = supervisor_engine.answer(question)
-        answer = result.get("answer", "")
-        chat.mode = result.get("mode", "supervisor")
-        chat.category = result.get("category", "")
-        chat.sources = {"law": result.get("sources", []), "precedent": result.get("precedents", [])}
-    except Exception as e:
-        logger.exception("advice_api 답변 생성 실패")
-        answer = llm_error_message(e)
-    finally:
-        query_logger = get_logger()
-        if query_logger:
-            query_logger.finish(answer)
-            print(
-                "[advice_api timing]",
-                {
-                    "total": query_logger.total_elapsed(),
-                    "nodes": query_logger.nodes,
-                },
-                flush=True,
-            )
-            query_logger.save()
-        clear_logger()
-        chat.answer = answer
-        chat.save()
+    def event_stream():
+        answer = ""
+        try:
+            init_logger(question)
+            for event in supervisor_engine.stream_answer(question):
+                kind = event[0]
+                if kind == "done":
+                    result = event[1]
+                    answer = result.get("answer", "")
+                    chat.mode = result.get("mode", "supervisor")
+                    chat.category = result.get("category", "")
+                    chat.sources = {"law": result.get("sources", []), "precedent": result.get("precedents", [])}
+                else:
+                    _, node_name, phase, label, log, elapsed = event
+                    yield _sse({
+                        "type": "progress",
+                        "node": node_name,
+                        "phase": phase,
+                        "label": label,
+                        "log": log,
+                        "elapsed": round(elapsed, 2) if elapsed is not None else None,
+                    })
+        except Exception as e:
+            logger.exception("advice_api 답변 생성 실패")
+            answer = llm_error_message(e)
+        finally:
+            query_logger = get_logger()
+            if query_logger:
+                query_logger.finish(answer)
+                print(
+                    "[advice_api timing]",
+                    {
+                        "total": query_logger.total_elapsed(),
+                        "nodes": query_logger.nodes,
+                    },
+                    flush=True,
+                )
+                query_logger.save()
+            clear_logger()
+            chat.answer = answer
+            chat.save()
 
-    return JsonResponse({"answer": answer, "message_id": chat.id, "mode": chat.mode})
+        yield _sse({"type": "done", "answer": answer, "message_id": chat.id, "mode": chat.mode})
+
+    response = StreamingHttpResponse(event_stream(), content_type="text/event-stream; charset=utf-8")
+    response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"
+    return response
 
 
 @require_POST
