@@ -85,6 +85,7 @@ class SupervisorState(TypedDict):
     rag_precedents: list                         # RAG 판례 원문 (frontend 드로어 표시용)
     rag_category: str                            # RAG 카테고리
     rag_procedure: str
+    rag_mode: str                                # router_engine이 판단한 세부 모드 (case_based_answer 등)
     review_count: int
 
 
@@ -279,6 +280,7 @@ def rag_router_node(state: SupervisorState) -> dict:
         "rag_sources": result.sources,
         "rag_precedents": result.precedents,
         "rag_category": result.category,
+        "rag_mode": result.mode,
         "log": "법률 답변 생성 완료",
         "iteration": state.get("iteration", 0) + 1,
         "rag_procedure": result.procedure,

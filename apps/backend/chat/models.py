@@ -4,9 +4,11 @@ from django.contrib.auth.models import User
 
 class ChatHistory(models.Model):
     MODE_CHOICES = [
-        ('rag', 'RAG 질의응답'),
-        ('calculator', '법률 계산기'),
-        ('news', '판례/법률 뉴스'),
+        ('case_based_answer', '사례 기반 답변'),
+        ('case_with_procedure', '사례 판단 + 절차 안내'),
+        ('procedure_guidance', '절차 안내'),
+        ('allowance_calculator', '수당 계산기'),
+        ('latest_news', '최신 뉴스'),
         ('supervisor', '전문 상담사'),
     ]
 

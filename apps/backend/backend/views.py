@@ -365,7 +365,7 @@ def advice_api(request):
         init_logger(question)
         result = supervisor_engine.answer(question)
         answer = result.get("answer", "")
-        chat.mode = "supervisor"
+        chat.mode = result.get("mode", "supervisor")
         chat.category = result.get("category", "")
         chat.sources = {"law": result.get("sources", []), "precedent": result.get("precedents", [])}
     except Exception as e:
