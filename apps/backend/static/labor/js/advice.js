@@ -50,8 +50,8 @@ function renderAnswerWithLegalBasis(markdown) {
     const legalHtml = markdownToHtml(legal.join("\n"));
     return `<div class="answer-flip">
         <div class="answer-card" data-answer-face="front">
-            ${beforeHtml}${afterHtml}
             <button type="button" class="mini-button answer-flip-btn right" data-action="show-legal-basis">법적 근거 →</button>
+            ${beforeHtml}${afterHtml}
         </div>
         <div class="answer-card" data-answer-face="back" hidden>
             <button type="button" class="mini-button answer-flip-btn left" data-action="show-summary">← 요약으로</button>
