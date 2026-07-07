@@ -38,7 +38,10 @@ class SupervisorEngine:
             "iteration": 0,
             "error": "",
             "rag_sources": [],
+            "rag_precedents": [],
+            "rag_category": "",
             "rag_procedure": "",
+            "rag_mode": "",
             "review_count": 0,
         }
 
@@ -86,6 +89,7 @@ class SupervisorEngine:
             "rag_precedents": [],
             "rag_category": "",
             "rag_procedure": "",
+            "rag_mode": "",
             "review_count": 0,
         })
         answer_text = self._build_final_answer(result)
@@ -93,6 +97,7 @@ class SupervisorEngine:
         precedents = result.get("rag_precedents", [])
         category = result.get("rag_category", "")
         procedure = result.get("rag_procedure", "")
+        mode = self._determine_route_mode(result)
 
         logger = get_logger()
         if logger_created and logger:
@@ -106,8 +111,23 @@ class SupervisorEngine:
             "sources": sources,
             "precedents": precedents,
             "category": category,
-            "mode": "supervisor",
+            "mode": mode,
         }
+
+    @staticmethod
+    def _determine_route_mode(state: dict) -> str:
+        """실행된 서브 에이전트를 바탕으로 ChatHistory.mode에 기록할 세부 모드를 결정.
+        rag_router가 실행됐다면 router_engine이 판단한 세부 모드
+        (case_based_answer/case_with_procedure/procedure_guidance)를 그대로 쓰고,
+        계산기/뉴스만 단독 실행됐다면 그에 맞는 모드로 표시한다."""
+        intermediate = state.get("intermediate_results", {})
+        if intermediate.get("rag"):
+            return state.get("rag_mode") or "case_based_answer"
+        if intermediate.get("calculator"):
+            return "allowance_calculator"
+        if intermediate.get("news"):
+            return "latest_news"
+        return "supervisor"
 
     @staticmethod
     def _build_final_answer(state: dict) -> str:
