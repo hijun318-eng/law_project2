@@ -370,7 +370,7 @@ def advice_api(request):
         chat.answer = answer
         chat.save()
 
-    return JsonResponse({"answer": answer, "message_id": chat.id})
+    return JsonResponse({"answer": answer, "message_id": chat.id, "mode": chat.mode})
 
 
 @require_POST

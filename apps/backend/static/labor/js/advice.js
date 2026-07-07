@@ -21,6 +21,25 @@ function renderPrecedents(precedents) {
     }).join("");
 }
 
+// case_based_answer 모드 답변(쉬운 요약/법적 근거/결론 구조)에서 "법적 근거" 섹션만 제거.
+// 법령·판례 원문은 "법령 원문" 버튼의 드로어에서 확인 가능하므로 채팅에서는 요약과 결론만 보여줌.
+function stripLegalBasisSection(markdown) {
+    const lines = String(markdown).split("\n");
+    const output = [];
+    let skipping = false;
+    for (const line of lines) {
+        if (/^##\s+법적\s*근거\s*$/.test(line.trim())) {
+            skipping = true;
+            continue;
+        }
+        if (skipping && /^##\s+/.test(line.trim())) {
+            skipping = false;
+        }
+        if (!skipping) output.push(line);
+    }
+    return output.join("\n").trim();
+}
+
 export function initAdvice() {
     const adviceSection = document.querySelector("[data-advice-api]");
     if (!adviceSection) return;
@@ -62,7 +81,8 @@ export function initAdvice() {
         appendMessage(messages, "ai", "답변을 준비하고 있습니다...");
         postJson(adviceSection.dataset.adviceApi, { question }).then((data) => {
             messages.lastElementChild.remove();
-            appendMessage(messages, "ai", data.answer, true, false, data.message_id);
+            const displayText = data.mode === "case_based_answer" ? stripLegalBasisSection(data.answer) : data.answer;
+            appendMessage(messages, "ai", displayText, true, false, data.message_id);
         });
     };
 
