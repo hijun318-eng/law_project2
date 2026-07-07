@@ -11,9 +11,11 @@
     <div class="news-list" id="newsList">
         {% for news in news_items %}
             <article class="news-card">
-                <header><time>{{ news.date }}</time></header>
-                <h2>{{ news.title }}</h2>
-                <p>{{ news.summary }}</p>
+                <a href="{{ news.link }}" target="_blank" rel="noopener">
+                    <header><time>{{ news.date }}</time></header>
+                    <h2>{{ news.title }}</h2>
+                    <p>{{ news.summary }}</p>
+                </a>
             </article>
         {% endfor %}
     </div>

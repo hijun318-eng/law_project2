@@ -345,6 +345,7 @@ input:focus, textarea:focus, select:focus { border-color: #d9a638; box-shadow: 0
 .summary-box { padding: 16px; margin-bottom: 16px; background: var(--plum-soft); border-color: #ded3e8; color: #4b5563; }
 .news-list, .stack-list, .feedback-list { display: grid; gap: 12px; }
 .news-card { padding: 18px; }
+.news-card > a { display: block; cursor: pointer; }
 .news-card header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
 .news-card header span, .list-card span, .feedback-card header span { padding: 3px 8px; border-radius: 6px; background: var(--primary-soft); color: var(--primary-dark); font-size: 12px; font-weight: 800; }
 .news-card h2 { margin: 0 0 10px; font-size: 16px; }

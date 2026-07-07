@@ -32,6 +32,7 @@ def get_news(query: str = "") -> tuple[list[dict], str]:
             "title": e.get("title", ""),
             "date": _format_pubdate(e.get("pubDate", "")),
             "summary": e.get("description", ""),
+            "link": e.get("link", ""),
         }
         for e in evidence
     ]

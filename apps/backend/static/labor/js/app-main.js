@@ -1,7 +1,7 @@
 import { initSidebar } from "./sidebar.js";
 import { initAdvice } from "./advice.js?v=2";
 import { initCalculator } from "./calculator.js";
-import { initNews } from "./news.js?v=3";
+import { initNews } from "./news.js?v=4";
 import { markdownToHtml } from "./utils.js?v=2";
 
 console.log("[app-main] module started");
