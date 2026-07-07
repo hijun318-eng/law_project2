@@ -30,6 +30,8 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(','
 
 RANKER_URL = config('RANKER_URL', default='http://localhost:8001')
 RANKER_TIMEOUT_SECONDS = config('RANKER_TIMEOUT_SECONDS', default=30, cast=int)
+# RunPod 등 외부 네트워크로 노출된 ranker를 쓸 때 요청 인증용 공유 비밀키
+RANKER_API_KEY = config('RANKER_API_KEY', default='')
 
 
 # Application definition

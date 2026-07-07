@@ -28,6 +28,10 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
+# RunPod 등 외부 네트워크에 노출될 때 요청을 검증하기 위한 공유 비밀키.
+# 비어 있으면(로컬 개발 등 내부망 전용 환경) 인증을 강제하지 않음.
+RANKER_API_KEY = config('RANKER_API_KEY', default='')
+
 
 # Application definition
 

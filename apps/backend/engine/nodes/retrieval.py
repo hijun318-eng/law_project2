@@ -8,18 +8,23 @@ logger = logging.getLogger(__name__)
 
 def _call_ranker(query: str, documents: list[str], timeout: int | None = None) -> list[float]:
     """랭커 마이크로서비스를 HTTP로 호출. 실패 시 균등 점수 fallback."""
+    api_key = ""
     try:
         from django.conf import settings
         ranker_url = settings.RANKER_URL
         timeout = timeout or getattr(settings, "RANKER_TIMEOUT_SECONDS", 30)
+        api_key = getattr(settings, "RANKER_API_KEY", "")
     except (ImportError, AttributeError):
         ranker_url = 'http://localhost:8001'
         timeout = timeout or 30
+
+    headers = {'X-Api-Key': api_key} if api_key else {}
 
     try:
         resp = requests.post(
             f'{ranker_url}/rerank/',
             json={'query': query, 'documents': documents},
+            headers=headers,
             timeout=(5, timeout),
         )
         resp.raise_for_status()
