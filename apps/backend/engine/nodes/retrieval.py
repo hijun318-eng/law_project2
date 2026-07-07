@@ -18,18 +18,32 @@ def _call_ranker(query: str, documents: list[str], timeout: int | None = None) -
         ranker_url = 'http://localhost:8001/rerank/'
         timeout = timeout or 30
 
-    headers = {'X-Api-Key': api_key} if api_key else {}
+    # RunPod Serverless(runsync)는 RunPod 플랫폼 자체 인증(Authorization: Bearer)과
+    # {"input": {...}} 요청 포맷을 요구하므로, 자체 운영 중인 ranker(X-Api-Key)와 분기 처리한다.
+    is_runpod_serverless = "api.runpod.ai" in ranker_url
+    payload = {'query': query, 'documents': documents}
+    if is_runpod_serverless:
+        headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
+        payload = {'input': payload}
+    else:
+        headers = {'X-Api-Key': api_key} if api_key else {}
 
     try:
         resp = requests.post(
             ranker_url,
-            json={'query': query, 'documents': documents},
+            json=payload,
             headers=headers,
             timeout=(5, timeout),
         )
         resp.raise_for_status()
         data = resp.json()
-        scores = data.get('scores', [])
+        if is_runpod_serverless:
+            # 응답 형식: {"output": {"results": [{"index":0, "score":..., "normalized_score":...}, ...]}}
+            results = (data.get('output') or {}).get('results', [])
+            by_index = {r.get('index'): r.get('score', 0.0) for r in results}
+            scores = [by_index.get(i, 0.0) for i in range(len(documents))]
+        else:
+            scores = data.get('scores', [])
         if len(scores) != len(documents):
             logger.warning("ranker score count mismatch: expected=%s actual=%s", len(documents), len(scores))
             return [0.5] * len(documents)
