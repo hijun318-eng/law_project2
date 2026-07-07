@@ -116,7 +116,7 @@
 .mock-msg-ai { display: flex; gap: 14px; margin-top: 22px; }
 .mock-avatar { width: 42px; height: 42px; border-radius: 50%; background: #f1efe8; display: grid; place-items: center; flex-shrink: 0; font-size: 17px; }
 .mock-ai-bubble { background: #faf9f5; border: 1px solid var(--cream-line); border-radius: 4px 18px 18px 18px; padding: 17px 20px; font-size: 14.5px; line-height: 1.75; color: var(--ink); }
-.mock-sources { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0 0 56px; }
+.mock-sources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 16px 0 0 56px; }
 .mock-source-card { background: #fbeddb; border: 1px solid #fce0c3; border-radius: 12px; padding: 16px; }
 .mock-source-card span { font-size: 11px; color: var(--muted2); font-weight: 700; }
 .mock-source-card strong { display: block; margin: 6px 0 3px; font-size: 15px; color: var(--ink); }
@@ -138,7 +138,7 @@
 .live-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--primary-dark); color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; }
 .live-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #6fd18a; }
 
-.feature-grid2 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.feature-grid2 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .feature-card2 { border-radius: 18px; padding: 30px; display: flex; flex-direction: column; min-height: 250px; }
 .feature-card2.dark { background: #2f2414; color: #fffaf1; }
 .feature-card2.light { background: #fff; border: 1px solid var(--cream-line); }
@@ -188,7 +188,7 @@
 
 /* ── 6. 푸터 ──────────────────────────────────────────── */
 .landing-footer2 { background: var(--noir); color: #fff; padding: 60px 40px 0; }
-.footer-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; padding-bottom: 52px; border-bottom: 1px solid var(--noir-line); }
+.footer-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 40px; padding-bottom: 52px; border-bottom: 1px solid var(--noir-line); }
 .footer-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; margin-bottom: 14px; }
 .footer-brand .gold { color: var(--gold); }
 .footer-grid > div:first-child p { color: rgba(255,255,255,.5); font-size: 13px; line-height: 1.7; max-width: 300px; margin: 0; }
@@ -203,4 +203,34 @@
     font-family: "Noto Serif KR", serif; font-weight: 700; color: var(--cream);
     font-size: clamp(70px, 13vw, 210px); text-align: center; line-height: 1; letter-spacing: -.01em;
     white-space: nowrap; overflow: hidden; padding: 16px 0 0;
+}
+
+/* ── 모바일 대응(768px 이하): 이 랜딩 섹션들은 데스크톱 다단 레이아웃 전용으로 만들어져 있어 별도 스택 규칙 필요 ── */
+@media (max-width: 768px) {
+    .source-ticker-label { flex-basis: 140px; padding: 12px 16px; font-size: 13px; }
+    .landing-feature-nav { display: none; }
+    .landing-header { padding: 14px 16px; }
+
+    .hero-mock-wrap { padding: 32px 16px 56px; }
+    .hero-mock-body { padding: 20px; }
+    .mock-msg-user { max-width: 88%; }
+    .mock-sources { grid-template-columns: 1fr; margin-left: 0; }
+    .mock-loading { margin-left: 0; }
+    .mock-ai-bubble { font-size: 14px; }
+
+    .features-section { padding: 56px 16px; }
+    .features-head h2 { font-size: 28px; }
+    .feature-grid2 { grid-template-columns: 1fr; }
+
+    .steps-section { padding: 56px 16px; }
+    .steps-head h2 { font-size: 26px; }
+
+    .cta-wrap { padding: 0 16px 56px; }
+    .cta-card { padding: 32px 20px; flex-direction: column; align-items: flex-start; gap: 16px; }
+    .cta-card h2 { font-size: 26px; }
+    .cta-button { position: static; }
+
+    .landing-footer2 { padding: 40px 16px 0; }
+    .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+    .footer-wordmark { font-size: clamp(40px, 18vw, 70px); }
 }

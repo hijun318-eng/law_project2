@@ -170,6 +170,10 @@ input, textarea, select {
     outline: none;
 }
 input:focus, textarea:focus, select:focus { border-color: #d9a638; box-shadow: 0 0 0 3px rgba(140,90,43,.15); }
+input.invalid { border-color: var(--red); }
+input.invalid:focus { box-shadow: 0 0 0 3px rgba(197,85,75,.15); }
+.field-error { font-weight: 400; font-size: 12px; color: var(--red); }
+.full-button:disabled { opacity: .5; cursor: not-allowed; }
 
 .notice-box {
     margin-top: 16px;
@@ -504,6 +508,22 @@ td small { display: block; color: var(--muted); margin-top: 3px; }
     .hero-search, .page-head, .table-tools { flex-direction: column; }
     .hero-search button { width: 100%; }
     .feedback-meter { grid-template-columns: 1fr 1fr; }
+}
+
+/* 소형 모바일(360~480px): 900px 브레이크포인트만으로는 좁은 화면에서 여백/폰트가 과도해 추가 축소 */
+@media (max-width: 480px) {
+    .landing-header { padding: 14px 16px; }
+    .landing-actions { gap: 6px; }
+    .ghost-link, .primary-link { padding: 8px 12px; font-size: 13px; }
+    .hero { padding: 56px 16px 48px; }
+    .hero h1 { font-size: clamp(28px, 8vw, 40px); }
+    .feature-grid { padding: 0 16px 48px; }
+    .auth-card { padding: 20px; }
+    .content-narrow, .admin-main { padding: 16px 12px; }
+    .message { max-width: 92%; padding: 11px 14px; font-size: 14px; }
+    .quick-grid button { padding: 14px; }
+    .composer, .search-panel { padding: 8px; gap: 6px; }
+    .feedback-meter { grid-template-columns: 1fr; text-align: left; }
 }
 
 

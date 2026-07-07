@@ -12,11 +12,20 @@
             <button type="button" data-calc-type="weekly">주휴수당</button>
             <button type="button" data-calc-type="minimum">최저임금 확인</button>
         </div>
-        <form id="calcForm" class="stack-form" method="POST" action="?page=calculator">
+        <form id="calcForm" class="stack-form" method="POST" action="?page=calculator" novalidate>
             {% csrf_token %}
-            <label data-salary-field>월 기본급 (원)<input name="salary" value="3500000"></label>
-            <label data-months-field>근무 기간 (개월)<input name="months" value="14"></label>
-            <label data-hours-field hidden>주 소정근로시간<input name="hours" value="40"></label>
+            <label data-salary-field>월 기본급 (원)
+                <input name="salary" type="number" min="0" step="1" inputmode="decimal" value="3500000" data-validate="salary">
+                <small class="field-error" data-error-for="salary" hidden></small>
+            </label>
+            <label data-months-field>근무 기간 (개월)
+                <input name="months" type="number" min="0" step="0.1" inputmode="decimal" value="14" data-validate="months">
+                <small class="field-error" data-error-for="months" hidden></small>
+            </label>
+            <label data-hours-field hidden>주 소정근로시간
+                <input name="hours" type="number" min="0" max="168" step="0.1" inputmode="decimal" value="40" data-validate="hours">
+                <small class="field-error" data-error-for="hours" hidden></small>
+            </label>
             <div class="notice-box" data-minimum-box hidden>
                 <strong>2026년 법정 최저임금</strong>
                 <b>{{ minimum_wage }}원 / 시간</b>

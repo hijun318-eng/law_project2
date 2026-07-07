@@ -15,6 +15,10 @@ from django.contrib.auth.models import User
 from chat.models import ChatHistory
 from monitoring.models import PriceConfig
 from engine.utils.execution_logger import clear_logger, get_logger, init_logger
+from engine.utils.llm_errors import llm_error_message
+import logging
+
+logger = logging.getLogger(__name__)
 
 supervisor_engine = SupervisorEngine()
 
@@ -395,7 +399,8 @@ def advice_api(request):
         chat.category = result.get("category", "")
         chat.sources = {"law": result.get("sources", []), "precedent": result.get("precedents", [])}
     except Exception as e:
-        answer = f"오류 발생: {str(e)}"
+        logger.exception("advice_api 답변 생성 실패")
+        answer = llm_error_message(e)
     finally:
         query_logger = get_logger()
         if query_logger:
@@ -472,7 +477,11 @@ def calculate_api(request):
     payload = _json_payload(request)
     mode = payload.get("mode", "form")
     if mode == "chat":
-        message, result = calculator.calculate_natural(payload.get("text", ""))
+        try:
+            message, result = calculator.calculate_natural(payload.get("text", ""))
+        except Exception as e:
+            logger.exception("calculate_api 자연어 계산 실패")
+            return JsonResponse({"message": llm_error_message(e), "result": None})
     else:
         result = calculator.calculate_form(
             payload.get("calc_type", "severance"),

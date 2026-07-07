@@ -1,6 +1,6 @@
 import { initSidebar } from "./sidebar.js";
 import { initAdvice } from "./advice.js?v=9";
-import { initCalculator } from "./calculator.js";
+import { initCalculator } from "./calculator.js?v=2";
 import { initNews } from "./news.js?v=4";
 import { markdownToHtml } from "./utils.js?v=2";
 
