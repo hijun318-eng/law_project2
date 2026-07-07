@@ -1,4 +1,4 @@
-import { postJson, appendMessage, escapeHtml } from "./utils.js?v=2";
+import { postJson, appendMessage, escapeHtml, markdownToHtml } from "./utils.js?v=2";
 
 function renderLawSources(sources) {
     if (!sources || sources.length === 0) {
@@ -21,23 +21,33 @@ function renderPrecedents(precedents) {
     }).join("");
 }
 
-// case_based_answer 모드 답변(쉬운 요약/법적 근거/결론 구조)에서 "법적 근거" 섹션만 제거.
-// 법령·판례 원문은 "법령 원문" 버튼의 드로어에서 확인 가능하므로 채팅에서는 요약과 결론만 보여줌.
-function stripLegalBasisSection(markdown) {
+// case_based_answer 모드 답변(쉬운 요약/법적 근거/결론 구조)에서 "법적 근거" 섹션을
+// 삭제하지 않고, 접힌 상태의 토글 버튼으로 감싸서 눌렀을 때만 펼쳐지도록 함.
+function renderAnswerWithLegalBasis(markdown) {
     const lines = String(markdown).split("\n");
-    const output = [];
-    let skipping = false;
+    const before = [];
+    const legal = [];
+    const after = [];
+    let section = "before";
     for (const line of lines) {
-        if (/^##\s+법적\s*근거\s*$/.test(line.trim())) {
-            skipping = true;
+        const trimmed = line.trim();
+        if (section === "before" && /^##\s+법적\s*근거\s*$/.test(trimmed)) {
+            section = "legal";
             continue;
         }
-        if (skipping && /^##\s+/.test(line.trim())) {
-            skipping = false;
+        if (section === "legal" && /^##\s+/.test(trimmed)) {
+            section = "after";
         }
-        if (!skipping) output.push(line);
+        (section === "before" ? before : section === "legal" ? legal : after).push(line);
     }
-    return output.join("\n").trim();
+
+    const beforeHtml = markdownToHtml(before.join("\n"));
+    const afterHtml = markdownToHtml(after.join("\n"));
+    if (legal.length === 0) {
+        return `${beforeHtml}${afterHtml}`;
+    }
+    const legalHtml = markdownToHtml(legal.join("\n"));
+    return `${beforeHtml}<div class="legal-basis-toggle-row"><strong>법적 근거</strong><button type="button" class="mini-button" data-action="toggle-legal-basis">펼치기</button></div><div class="legal-basis-body" hidden>${legalHtml}</div>${afterHtml}`;
 }
 
 export function initAdvice() {
@@ -81,8 +91,11 @@ export function initAdvice() {
         appendMessage(messages, "ai", "답변을 준비하고 있습니다...");
         postJson(adviceSection.dataset.adviceApi, { question }).then((data) => {
             messages.lastElementChild.remove();
-            const displayText = data.mode === "case_based_answer" ? stripLegalBasisSection(data.answer) : data.answer;
-            appendMessage(messages, "ai", displayText, true, false, data.message_id);
+            if (data.mode === "case_based_answer") {
+                appendMessage(messages, "ai", renderAnswerWithLegalBasis(data.answer), true, true, data.message_id);
+            } else {
+                appendMessage(messages, "ai", data.answer, true, false, data.message_id);
+            }
         });
     };
 
@@ -98,6 +111,16 @@ export function initAdvice() {
     messages?.addEventListener("click", (event) => {
         const drawerBtn = event.target.closest("[data-action='open-drawer']");
         if (drawerBtn) { openLawDrawer(drawerBtn.dataset.mid); return; }
+
+        const legalToggleBtn = event.target.closest("[data-action='toggle-legal-basis']");
+        if (legalToggleBtn) {
+            const body = legalToggleBtn.closest(".legal-basis-toggle-row")?.nextElementSibling;
+            if (body) {
+                body.hidden = !body.hidden;
+                legalToggleBtn.textContent = body.hidden ? "펼치기" : "접기";
+            }
+            return;
+        }
 
         const fbBtn = event.target.closest("[data-action^='feedback_']");
         if (!fbBtn) return;
