@@ -12,12 +12,13 @@ RANKER_URL=https://<pod-id>-8001      CUDA PyTorch
    .proxy.runpod.net/rerank/
 RANKER_API_KEY=<공유 비밀키>
 
-        인터넷 경유 (같은 VPC 아님) + X-Api-Key 인증
+        인터넷 경유 (같은 VPC 아님) + Authorization: Bearer 인증
 ```
 
 AWS 내부망 통신과 다른 점: 지금까지는 backend↔ranker가 같은 VPC 내부망이라 인증 없이 호출했지만,
-RunPod Pod는 퍼블릭 프록시 URL로 노출되므로 `X-Api-Key` 헤더로 요청을 검증합니다
-(`apps/ranker/ranker/views.py`, `apps/backend/engine/nodes/retrieval.py`에 이미 반영됨).
+RunPod Pod는 퍼블릭 프록시 URL로 노출되므로 `Authorization: Bearer <RANKER_API_KEY>` 헤더로 요청을 검증합니다
+(RunPod Serverless(runsync)와 동일한 인증 방식이며, `apps/ranker/ranker/views.py`,
+`apps/backend/engine/nodes/retrieval.py`에 이미 반영됨).
 
 ## 1. 이미지 빌드 & 푸시
 
@@ -66,7 +67,7 @@ Pod가 `Running` 상태가 되면 콘솔에 프록시 URL이 표시됩니다.
 ```bash
 curl -X POST https://<pod-id>-8001.proxy.runpod.net/rerank/ \
   -H "Content-Type: application/json" \
-  -H "X-Api-Key: <RANKER_API_KEY와 동일한 값>" \
+  -H "Authorization: Bearer <RANKER_API_KEY와 동일한 값>" \
   -d '{"query":"부당해고","documents":["해고 정당성 관련 판례 요약"]}'
 ```
 
@@ -76,7 +77,7 @@ curl -X POST https://<pod-id>-8001.proxy.runpod.net/rerank/ \
 {"scores":[0.1234],"count":1}
 ```
 
-`X-Api-Key` 헤더를 빼거나 값이 틀리면 `{"error":"unauthorized"}` (401)이 반환되는지도 확인합니다.
+`Authorization` 헤더를 빼거나 값이 틀리면 `{"error":"unauthorized"}` (401)이 반환되는지도 확인합니다.
 
 ## 4. Backend EC2 `.env` 수정
 

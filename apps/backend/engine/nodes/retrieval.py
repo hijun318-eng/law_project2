@@ -18,15 +18,13 @@ def _call_ranker(query: str, documents: list[str], timeout: int | None = None) -
         ranker_url = 'http://localhost:8001/rerank/'
         timeout = timeout or 30
 
-    # RunPod Serverless(runsync)는 RunPod 플랫폼 자체 인증(Authorization: Bearer)과
-    # {"input": {...}} 요청 포맷을 요구하므로, 자체 운영 중인 ranker(X-Api-Key)와 분기 처리한다.
+    # 인증은 자체 ranker/RunPod 공통으로 Authorization: Bearer 사용.
+    # RunPod Serverless(runsync)만 {"input": {...}} 요청 포맷과 {"output": {...}} 응답 포맷이 다르다.
     is_runpod_serverless = "api.runpod.ai" in ranker_url
+    headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
     payload = {'query': query, 'documents': documents}
     if is_runpod_serverless:
-        headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
         payload = {'input': payload}
-    else:
-        headers = {'X-Api-Key': api_key} if api_key else {}
 
     try:
         resp = requests.post(
