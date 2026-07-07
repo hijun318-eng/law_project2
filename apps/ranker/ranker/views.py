@@ -25,8 +25,11 @@ def rerank_view(request):
     Error response:
         {"error": "message"}
     """
-    if settings.RANKER_API_KEY and request.headers.get('X-Api-Key') != settings.RANKER_API_KEY:
-        return JsonResponse({'error': 'unauthorized'}, status=401)
+    if settings.RANKER_API_KEY:
+        auth_header = request.headers.get('Authorization', '')
+        token = auth_header.removeprefix('Bearer ').strip()
+        if token != settings.RANKER_API_KEY:
+            return JsonResponse({'error': 'unauthorized'}, status=401)
 
     try:
         data = json.loads(request.body)

@@ -15,21 +15,33 @@ def _call_ranker(query: str, documents: list[str], timeout: int | None = None) -
         timeout = timeout or getattr(settings, "RANKER_TIMEOUT_SECONDS", 30)
         api_key = getattr(settings, "RANKER_API_KEY", "")
     except (ImportError, AttributeError):
-        ranker_url = 'http://localhost:8001'
+        ranker_url = 'http://localhost:8001/rerank/'
         timeout = timeout or 30
 
-    headers = {'X-Api-Key': api_key} if api_key else {}
+    # 인증은 자체 ranker/RunPod 공통으로 Authorization: Bearer 사용.
+    # RunPod Serverless(runsync)만 {"input": {...}} 요청 포맷과 {"output": {...}} 응답 포맷이 다르다.
+    is_runpod_serverless = "api.runpod.ai" in ranker_url
+    headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
+    payload = {'query': query, 'documents': documents}
+    if is_runpod_serverless:
+        payload = {'input': payload}
 
     try:
         resp = requests.post(
-            f'{ranker_url}/rerank/',
-            json={'query': query, 'documents': documents},
+            ranker_url,
+            json=payload,
             headers=headers,
             timeout=(5, timeout),
         )
         resp.raise_for_status()
         data = resp.json()
-        scores = data.get('scores', [])
+        if is_runpod_serverless:
+            # 응답 형식: {"output": {"results": [{"index":0, "score":..., "normalized_score":...}, ...]}}
+            results = (data.get('output') or {}).get('results', [])
+            by_index = {r.get('index'): r.get('score', 0.0) for r in results}
+            scores = [by_index.get(i, 0.0) for i in range(len(documents))]
+        else:
+            scores = data.get('scores', [])
         if len(scores) != len(documents):
             logger.warning("ranker score count mismatch: expected=%s actual=%s", len(documents), len(scores))
             return [0.5] * len(documents)
