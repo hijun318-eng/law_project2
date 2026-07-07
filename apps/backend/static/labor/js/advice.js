@@ -21,8 +21,9 @@ function renderPrecedents(precedents) {
     }).join("");
 }
 
-// case_based_answer 모드 답변(쉬운 요약/법적 근거/결론 구조)에서 "법적 근거" 섹션을
-// 삭제하지 않고, 접힌 상태의 토글 버튼으로 감싸서 눌렀을 때만 펼쳐지도록 함.
+// case_based_answer 모드 답변(쉬운 요약/법적 근거/결론 구조)에서 "법적 근거" 섹션을 분리해
+// 카드 앞면(요약+결론)/뒷면(법적 근거) 두 장으로 나누고, 앞면 오른쪽 버튼으로 뒷면을,
+// 뒷면 왼쪽 버튼으로 다시 앞면을 보여주는 전환형 카드로 렌더링.
 function renderAnswerWithLegalBasis(markdown) {
     const lines = String(markdown).split("\n");
     const before = [];
@@ -47,7 +48,16 @@ function renderAnswerWithLegalBasis(markdown) {
         return `${beforeHtml}${afterHtml}`;
     }
     const legalHtml = markdownToHtml(legal.join("\n"));
-    return `${beforeHtml}<div class="legal-basis-toggle-row"><strong>법적 근거</strong><button type="button" class="mini-button" data-action="toggle-legal-basis">펼치기</button></div><div class="legal-basis-body" hidden>${legalHtml}</div>${afterHtml}`;
+    return `<div class="answer-flip">
+        <div class="answer-card" data-answer-face="front">
+            ${beforeHtml}${afterHtml}
+            <button type="button" class="mini-button answer-flip-btn right" data-action="show-legal-basis">법적 근거 →</button>
+        </div>
+        <div class="answer-card" data-answer-face="back" hidden>
+            <button type="button" class="mini-button answer-flip-btn left" data-action="show-summary">← 요약으로</button>
+            ${legalHtml}
+        </div>
+    </div>`;
 }
 
 export function initAdvice() {
@@ -112,12 +122,15 @@ export function initAdvice() {
         const drawerBtn = event.target.closest("[data-action='open-drawer']");
         if (drawerBtn) { openLawDrawer(drawerBtn.dataset.mid); return; }
 
-        const legalToggleBtn = event.target.closest("[data-action='toggle-legal-basis']");
-        if (legalToggleBtn) {
-            const body = legalToggleBtn.closest(".legal-basis-toggle-row")?.nextElementSibling;
-            if (body) {
-                body.hidden = !body.hidden;
-                legalToggleBtn.textContent = body.hidden ? "펼치기" : "접기";
+        const flipBtn = event.target.closest("[data-action='show-legal-basis'], [data-action='show-summary']");
+        if (flipBtn) {
+            const flip = flipBtn.closest(".answer-flip");
+            const front = flip?.querySelector("[data-answer-face='front']");
+            const back = flip?.querySelector("[data-answer-face='back']");
+            if (front && back) {
+                const showBack = flipBtn.dataset.action === "show-legal-basis";
+                front.hidden = showBack;
+                back.hidden = !showBack;
             }
             return;
         }

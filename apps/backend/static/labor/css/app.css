@@ -273,8 +273,10 @@ input:focus, textarea:focus, select:focus { border-color: #d9a638; box-shadow: 0
 .message.user { justify-self: end; background: #f1ce82;  color: #3a3a3a; border-bottom-right-radius: 4px; }
 .message.ai { justify-self: start; background: #fff; border: 1px solid #ebebeb; border-bottom-left-radius: 4px; color: #1f2937; }
 .message-actions { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eef2f7; display: flex; gap: 8px; flex-wrap: wrap; }
-.legal-basis-toggle-row { display: flex; justify-content: space-between; align-items: center; margin: 12px 0 8px; }
-.legal-basis-body { margin-bottom: 8px; }
+.answer-card { display: flex; flex-direction: column; gap: 10px; }
+.answer-flip-btn { margin-top: 4px; }
+.answer-flip-btn.right { align-self: flex-end; }
+.answer-flip-btn.left { align-self: flex-start; }
 .message-actions button { border: 0; border-radius: 999px; padding: 6px 10px; background: #f3f4f6; color: #4b5563; font-size: 12px; }
 .composer, .search-panel { display: flex; gap: 10px; padding: 10px; }
 .composer input, .composer textarea, .search-panel input { border: 0; box-shadow: none; }
