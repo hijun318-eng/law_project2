@@ -30,3 +30,6 @@ frontend/
 
 # Sisyphus 작업 계획
 .sisyphus/
+
+# Claude Code 개인 설정 (settings.json은 팀 공유용으로 커밋)
+.claude/settings.local.json
