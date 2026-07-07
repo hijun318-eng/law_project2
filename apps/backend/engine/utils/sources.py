@@ -17,7 +17,7 @@ def format_sources(state: dict) -> list:
             "chapter_title": m.get("chapter_title", ""),
         })
 
-    for doc in state.get("precedent_docs", []):
+    for doc in state.get("precedent_context_docs", []):
         m = doc.metadata
         sources.append({
             "type": "precedent",
