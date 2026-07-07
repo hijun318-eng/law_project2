@@ -1,4 +1,4 @@
-import { postJson, appendMessage, escapeHtml } from "./utils.js";
+import { postJson, appendMessage, escapeHtml } from "./utils.js?v=2";
 
 function renderLawSources(sources) {
     if (!sources || sources.length === 0) {

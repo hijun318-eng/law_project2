@@ -19,6 +19,8 @@ export function escapeHtml(value) {
 
 export function markdownToHtml(text) {
     let html = escapeHtml(text);
+    // 연속된 빈 줄(2개 이상의 개행)을 하나로 축소해 문단/주제 사이 공백을 줄임
+    html = html.replace(/\n{2,}/g, '\n');
     // 코드 블록 (```lang\n...```)
     html = html.replace(/```(\w*)\s*([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
     // 인라인 코드 (`code`)
@@ -36,10 +38,12 @@ export function markdownToHtml(text) {
     // 제목 (###, ##)
     html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
     html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
-    // 연속된 <li>를 <ul>로 감싸기
-    html = html.replace(/((?:<li>.*?(?:<\/li>)(?:\s*<br>)?\s*)+)/g, '<ul>$1</ul>');
+    // 연속된 <li>를 <ul>로 감싸고, 항목 사이 개행은 제거해 리스트 간격을 줄임
+    html = html.replace(/(?:<li>.*?<\/li>\n?)+/g, (block) => `<ul>${block.replace(/\n/g, '')}</ul>`);
     // 연속된 <blockquote>를 그룹화
     html = html.replace(/((?:<blockquote>.*?<\/blockquote>(?:\s*<br>)?\s*)+)/g, '$1');
+    // 제목 바로 다음 개행 제거 (제목 자체 여백으로 충분)
+    html = html.replace(/(<\/h[34]>)\n/g, '$1');
     // 줄바꿈을 <br>로 변환 (pre 태그 내부는 제외)
     html = html.replace(/\n/g, '<br>');
     return html;
