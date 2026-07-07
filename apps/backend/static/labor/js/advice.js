@@ -11,6 +11,16 @@ function renderLawSources(sources) {
     }).join("");
 }
 
+function renderPrecedents(precedents) {
+    if (!precedents || precedents.length === 0) {
+        return `<p class="empty-state">이 답변에 참고한 판례가 없습니다.</p>`;
+    }
+    return precedents.map((prec) => {
+        const heading = [prec.case_no, prec.category].filter(Boolean).join(" · ");
+        return `<article><strong>${escapeHtml(heading)}</strong><p>${escapeHtml(prec.content || "")}</p></article>`;
+    }).join("");
+}
+
 export function initAdvice() {
     const adviceSection = document.querySelector("[data-advice-api]");
     if (!adviceSection) return;
@@ -20,17 +30,28 @@ export function initAdvice() {
     const messages = document.querySelector("#adviceMessages");
     const quick = document.querySelector("[data-quick-questions]");
     const drawer = document.querySelector("#lawDrawer");
-    const drawerBody = document.querySelector("[data-law-drawer-body]");
+    const lawDrawerBody = document.querySelector("[data-drawer-panel='law']");
+    const precedentDrawerBody = document.querySelector("[data-drawer-panel='precedent']");
+    const drawerTabs = document.querySelector("[data-drawer-tabs]");
     const historyApiBase = adviceSection.dataset.adviceHistoryApi?.replace(/0\/?$/, "");
 
     const openLawDrawer = (messageId) => {
-        if (!drawerBody) return;
-        drawerBody.innerHTML = `<p class="empty-state">불러오는 중...</p>`;
+        if (!lawDrawerBody || !precedentDrawerBody) return;
+        lawDrawerBody.innerHTML = `<p class="empty-state">불러오는 중...</p>`;
+        precedentDrawerBody.innerHTML = "";
+        drawerTabs?.querySelectorAll("[data-drawer-tab]").forEach((btn) => btn.classList.toggle("active", btn.dataset.drawerTab === "law"));
+        lawDrawerBody.hidden = false;
+        precedentDrawerBody.hidden = true;
         drawer.hidden = false;
         fetch(`${historyApiBase}${messageId}/`)
             .then((response) => response.json())
-            .then((data) => { drawerBody.innerHTML = renderLawSources(data.sources); })
-            .catch(() => { drawerBody.innerHTML = `<p class="empty-state">법령 원문을 불러오지 못했습니다.</p>`; });
+            .then((data) => {
+                lawDrawerBody.innerHTML = renderLawSources(data.sources?.law);
+                precedentDrawerBody.innerHTML = renderPrecedents(data.sources?.precedent);
+            })
+            .catch(() => {
+                lawDrawerBody.innerHTML = `<p class="empty-state">법령·판례를 불러오지 못했습니다.</p>`;
+            });
     };
 
     const send = (text) => {
@@ -82,6 +103,14 @@ export function initAdvice() {
     });
     document.querySelectorAll("[data-close-drawer]").forEach((node) =>
         node.addEventListener("click", () => drawer.hidden = true));
+    drawerTabs?.addEventListener("click", (event) => {
+        const tabBtn = event.target.closest("[data-drawer-tab]");
+        if (!tabBtn) return;
+        drawerTabs.querySelectorAll("[data-drawer-tab]").forEach((btn) => btn.classList.toggle("active", btn === tabBtn));
+        const tab = tabBtn.dataset.drawerTab;
+        lawDrawerBody.hidden = tab !== "law";
+        precedentDrawerBody.hidden = tab !== "precedent";
+    });
 
     const initialQuestion = adviceSection.dataset.initialQuestion?.trim();
     if (initialQuestion) {

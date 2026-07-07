@@ -15,8 +15,13 @@
     <aside class="drawer" id="lawDrawer" hidden>
         <button class="drawer-backdrop" type="button" data-close-drawer></button>
         <div class="drawer-panel">
-            <header><h2>관련 법령 원문</h2><button type="button" data-close-drawer>×</button></header>
-            <div id="lawDrawerBody" data-law-drawer-body></div>
+            <header><h2>관련 법령·판례</h2><button type="button" data-close-drawer>×</button></header>
+            <div class="tabs" data-drawer-tabs>
+                <button type="button" class="active" data-drawer-tab="law">법령</button>
+                <button type="button" data-drawer-tab="precedent">판례</button>
+            </div>
+            <div id="lawDrawerBody" data-drawer-panel="law"></div>
+            <div id="precedentDrawerBody" data-drawer-panel="precedent" hidden></div>
         </div>
     </aside>
 </section>
