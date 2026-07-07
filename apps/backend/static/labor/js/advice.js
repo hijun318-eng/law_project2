@@ -63,7 +63,15 @@ function renderAnswerWithLegalBasis(markdown) {
 const ANSWER_DISCLAIMER = `<p class="answer-disclaimer">※ 이 답변은 AI가 제공하는 참고 정보이며 법적 효력이 있는 자문이 아닙니다. 구체적인 사안은 노무사·변호사 등 전문가와 상담하세요.</p>`;
 
 function renderProgress(label) {
-    return `<div class="progress-indicator"><span class="spinner" aria-hidden="true"></span><span class="progress-label">${escapeHtml(label)}</span></div>`;
+    return `<div class="progress-indicator"><span class="spinner" aria-hidden="true"></span><span class="progress-label">${escapeHtml(label)}</span><span class="progress-timer">0초</span></div>`;
+}
+
+// 노드 시작/종료 이벤트를 사람이 읽을 문장으로 변환.
+// 시작: "🔍 판례 직접 검색 중..." / 종료: "🔍 판례 직접 검색 완료 (1.2초)" (+ 있으면 세부 사유)
+function formatProgress(data) {
+    const elapsedText = data.elapsed != null ? ` (${data.elapsed}초)` : "";
+    const base = data.phase === "start" ? `${data.label} 중...` : `${data.label} 완료${elapsedText}`;
+    return data.log ? `${base} · ${data.log}` : base;
 }
 
 // advice_api는 LangGraph 노드가 진행될 때마다 SSE(text/event-stream)로
@@ -137,18 +145,27 @@ export function initAdvice() {
         appendMessage(messages, "user", question);
         appendMessage(messages, "ai", renderProgress("답변을 준비하고 있습니다..."), false, true);
         const progressBubble = messages.lastElementChild;
+        const progressLabel = progressBubble.querySelector(".progress-label");
+        const progressTimer = progressBubble.querySelector(".progress-timer");
+
+        const startedAt = Date.now();
+        const timerId = setInterval(() => {
+            if (progressTimer) progressTimer.textContent = `${Math.floor((Date.now() - startedAt) / 1000)}초`;
+        }, 1000);
+        const stopTimer = () => clearInterval(timerId);
 
         streamAdvice(adviceSection.dataset.adviceApi, question, {
             onProgress: (data) => {
-                const label = progressBubble.querySelector(".progress-label");
-                if (label) label.textContent = data.label + (data.log ? ` · ${data.log}` : "");
+                if (progressLabel) progressLabel.textContent = formatProgress(data);
             },
             onDone: (data) => {
+                stopTimer();
                 progressBubble.remove();
                 // 답변에 "## 법적 근거" 섹션이 있으면 카드 전환 UI로, 없으면 그대로 렌더링
                 appendMessage(messages, "ai", renderAnswerWithLegalBasis(data.answer) + ANSWER_DISCLAIMER, true, true, data.message_id);
             },
             onError: () => {
+                stopTimer();
                 progressBubble.remove();
                 appendMessage(messages, "ai", "답변을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
             },

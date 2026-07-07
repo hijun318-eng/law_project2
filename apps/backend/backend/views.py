@@ -401,14 +401,21 @@ def advice_api(request):
             for event in supervisor_engine.stream_answer(question):
                 kind = event[0]
                 if kind == "done":
-                    result = event[2]
+                    result = event[1]
                     answer = result.get("answer", "")
                     chat.mode = result.get("mode", "supervisor")
                     chat.category = result.get("category", "")
                     chat.sources = {"law": result.get("sources", []), "precedent": result.get("precedents", [])}
                 else:
-                    node_name, label, log = event
-                    yield _sse({"type": "progress", "node": node_name, "label": label, "log": log})
+                    _, node_name, phase, label, log, elapsed = event
+                    yield _sse({
+                        "type": "progress",
+                        "node": node_name,
+                        "phase": phase,
+                        "label": label,
+                        "log": log,
+                        "elapsed": round(elapsed, 2) if elapsed is not None else None,
+                    })
         except Exception as e:
             logger.exception("advice_api 답변 생성 실패")
             answer = llm_error_message(e)

@@ -7,9 +7,30 @@ from datetime import datetime
 from pathlib import Path
 
 
-__all__ = ["QueryLogger", "log_node", "init_logger", "get_logger", "clear_logger"]
+__all__ = [
+    "QueryLogger", "log_node", "init_logger", "get_logger", "clear_logger",
+    "set_progress_callback", "get_progress_callback", "clear_progress_callback",
+]
 
 _logger_context: contextvars.ContextVar = contextvars.ContextVar("query_logger", default=None)
+
+# 노드 시작/종료를 실시간으로 프론트엔드까지 전달하기 위한 콜백.
+# QueryLogger와 달리 매 노드마다 즉시 호출되어야 하므로 별도 contextvar로 관리한다.
+_progress_callback_context: contextvars.ContextVar = contextvars.ContextVar("progress_callback", default=None)
+
+
+def set_progress_callback(callback) -> None:
+    """현재 컨텍스트에 진행상황 콜백을 등록. callback(node_name, phase, log, elapsed)로 호출됨
+    (phase는 "start" 또는 "end", elapsed는 start일 때 None)."""
+    _progress_callback_context.set(callback)
+
+
+def get_progress_callback():
+    return _progress_callback_context.get()
+
+
+def clear_progress_callback() -> None:
+    _progress_callback_context.set(None)
 
 
 class QueryLogger:
@@ -152,17 +173,30 @@ def clear_logger():
 
 
 def log_node(func):
-    """Decorator that measures execution time of a LangGraph node function and records it to the active logger."""
+    """Decorator that measures execution time of a LangGraph node function, records it to the
+    active logger, and (if registered) notifies the progress callback on start/end of the node."""
     @functools.wraps(func)
     def wrapper(state, *args, **kwargs):
         logger = get_logger()
         node_name = func.__name__.replace("_node", "")
+        progress = get_progress_callback()
+        if progress:
+            try:
+                progress(node_name, "start", None, None)
+            except Exception:
+                pass
         start = time.time()
         try:
             result = func(state, *args, **kwargs)
             elapsed = time.time() - start
             if logger:
                 logger.record_node(node_name, elapsed, "success")
+            if progress:
+                try:
+                    log_msg = result.get("log") if isinstance(result, dict) else None
+                    progress(node_name, "end", log_msg, elapsed)
+                except Exception:
+                    pass
             return result
         except Exception as e:
             elapsed = time.time() - start
