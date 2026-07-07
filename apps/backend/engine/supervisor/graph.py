@@ -87,6 +87,7 @@ class SupervisorState(TypedDict):
     rag_procedure: str
     rag_mode: str                                # router_engine이 판단한 세부 모드 (case_based_answer 등)
     review_count: int
+    log: str                                     # 진행상황 스트리밍용 노드별 진행 메시지 (stream_answer에서 사용)
 
 
 # ── Node 함수 ────────────────────────────────────────────────

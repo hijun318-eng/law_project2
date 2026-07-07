@@ -57,7 +57,10 @@ class SupervisorEngine:
 
         answer = self._build_final_answer(latest_state)
         sources = latest_state.get("rag_sources", [])
+        precedents = latest_state.get("rag_precedents", [])
+        category = latest_state.get("rag_category", "")
         procedure = latest_state.get("rag_procedure", "")
+        mode = self._determine_route_mode(latest_state)
 
         logger = get_logger()
         if logger_created and logger:
@@ -69,6 +72,9 @@ class SupervisorEngine:
             "answer": answer,
             "procedure": procedure,
             "sources": sources,
+            "precedents": precedents,
+            "category": category,
+            "mode": mode,
         })
 
     def answer(self, question: str) -> dict:

@@ -1,4 +1,4 @@
-import { postJson, appendMessage, escapeHtml, markdownToHtml } from "./utils.js?v=2";
+import { postJson, appendMessage, escapeHtml, markdownToHtml, csrf } from "./utils.js?v=2";
 
 function renderLawSources(sources) {
     if (!sources || sources.length === 0) {
@@ -62,6 +62,41 @@ function renderAnswerWithLegalBasis(markdown) {
 
 const ANSWER_DISCLAIMER = `<p class="answer-disclaimer">※ 이 답변은 AI가 제공하는 참고 정보이며 법적 효력이 있는 자문이 아닙니다. 구체적인 사안은 노무사·변호사 등 전문가와 상담하세요.</p>`;
 
+function renderProgress(label) {
+    return `<div class="progress-indicator"><span class="spinner" aria-hidden="true"></span><span class="progress-label">${escapeHtml(label)}</span></div>`;
+}
+
+// advice_api는 LangGraph 노드가 진행될 때마다 SSE(text/event-stream)로
+// {"type": "progress", ...} 이벤트를 보내고, 마지막에 {"type": "done", ...}로 최종 답변을 보낸다.
+// onProgress(label)과 onDone(data)을 호출하며 스트림을 끝까지 읽는다.
+function streamAdvice(url, question, { onProgress, onDone, onError }) {
+    fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
+        body: JSON.stringify({ question }),
+    }).then((response) => {
+        if (!response.ok || !response.body) throw new Error(`요청 실패 (status ${response.status})`);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        const pump = () => reader.read().then(({ done, value }) => {
+            if (value) buffer += decoder.decode(value, { stream: true });
+            const chunks = buffer.split("\n\n");
+            buffer = done ? "" : chunks.pop();
+            chunks.forEach((chunk) => {
+                const line = chunk.split("\n").find((l) => l.startsWith("data: "));
+                if (!line) return;
+                const data = JSON.parse(line.slice(6));
+                if (data.type === "progress") onProgress(data);
+                else if (data.type === "done") onDone(data);
+            });
+            if (!done) return pump();
+        });
+        return pump();
+    }).catch(onError);
+}
+
 export function initAdvice() {
     const adviceSection = document.querySelector("[data-advice-api]");
     if (!adviceSection) return;
@@ -100,12 +135,23 @@ export function initAdvice() {
         if (!question) return;
         quick.hidden = true;
         appendMessage(messages, "user", question);
-        appendMessage(messages, "ai", "답변을 준비하고 있습니다...");
-        postJson(adviceSection.dataset.adviceApi, { question }).then((data) => {
-            messages.lastElementChild.remove();
-            // 답변에 "## 법적 근거" 섹션이 있으면 카드 전환 UI로, 없으면 그대로 렌더링
-            // (mode는 이제 "supervisor"로 통일되어 있어 문자열로 분기하지 않음)
-            appendMessage(messages, "ai", renderAnswerWithLegalBasis(data.answer) + ANSWER_DISCLAIMER, true, true, data.message_id);
+        appendMessage(messages, "ai", renderProgress("답변을 준비하고 있습니다..."), false, true);
+        const progressBubble = messages.lastElementChild;
+
+        streamAdvice(adviceSection.dataset.adviceApi, question, {
+            onProgress: (data) => {
+                const label = progressBubble.querySelector(".progress-label");
+                if (label) label.textContent = data.label + (data.log ? ` · ${data.log}` : "");
+            },
+            onDone: (data) => {
+                progressBubble.remove();
+                // 답변에 "## 법적 근거" 섹션이 있으면 카드 전환 UI로, 없으면 그대로 렌더링
+                appendMessage(messages, "ai", renderAnswerWithLegalBasis(data.answer) + ANSWER_DISCLAIMER, true, true, data.message_id);
+            },
+            onError: () => {
+                progressBubble.remove();
+                appendMessage(messages, "ai", "답변을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+            },
         });
     };
 
