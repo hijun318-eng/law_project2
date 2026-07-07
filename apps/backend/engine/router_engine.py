@@ -13,6 +13,7 @@ engine/router_engine.py
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from engine.config import llm
 from engine.calculator_engine import CalculatorEngine
@@ -59,6 +60,7 @@ class RouterResult:
     content: str
     category: str = ""
     sources: list = field(default_factory=list)
+    precedents: list = field(default_factory=list)
 
 
 class LawRouterEngine:
@@ -106,6 +108,21 @@ class LawRouterEngine:
         """GraphState에서 답변 생성에 참고한 법령 원문(law_analysis)을 추출합니다."""
         return state.get("law_analysis", [])
 
+    @staticmethod
+    def _extract_precedents(state: dict) -> list:
+        """GraphState에서 답변 생성에 참고한 판례 원문(precedent_context_docs)을 추출합니다."""
+        docs = state.get("precedent_context_docs", [])
+        precedents = []
+        for doc in docs:
+            if not hasattr(doc, "metadata"):
+                continue
+            precedents.append({
+                "case_no": Path(doc.metadata.get("source_file", "")).stem,
+                "category": doc.metadata.get("category", ""),
+                "content": doc.metadata.get("llm_brief", "") or doc.page_content,
+            })
+        return precedents
+
     def run(self, question: str, session_id: str | None = None) -> RouterResult:
         mode = self.route(question)
 
@@ -121,13 +138,15 @@ class LawRouterEngine:
                 state = graph_answer.invoke({"question": question})
                 category = self._extract_category(state)
                 sources = self._extract_sources(state)
-                result = RouterResult(mode=mode, content=state.get("final_answer", ""), category=category, sources=sources)
+                precedents = self._extract_precedents(state)
+                result = RouterResult(mode=mode, content=state.get("final_answer", ""), category=category, sources=sources, precedents=precedents)
 
             elif mode == ROUTE_PROCEDURE_GUIDANCE:
                 state = graph_procedure.invoke({"question": question})
                 category = self._extract_category(state)
                 sources = self._extract_sources(state)
-                result = RouterResult(mode=mode, content=state.get("procedure_guide", "skip"), category=category, sources=sources)
+                precedents = self._extract_precedents(state)
+                result = RouterResult(mode=mode, content=state.get("procedure_guide", "skip"), category=category, sources=sources, precedents=precedents)
 
             elif mode == ROUTE_ALLOWANCE_CALCULATOR:
                 engine = CalculatorEngine()

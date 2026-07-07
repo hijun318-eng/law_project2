@@ -363,14 +363,14 @@ def advice_api(request):
         answer = result.content
         chat.mode = result.mode
         chat.category = result.category
-        chat.sources = result.sources
+        chat.sources = {"law": result.sources, "precedent": result.precedents}
     except Exception as e:
         answer = f"오류 발생: {str(e)}"
     finally:
         chat.answer = answer
         chat.save()
 
-    return JsonResponse({"answer": answer, "message_id": chat.id})
+    return JsonResponse({"answer": answer, "message_id": chat.id, "mode": chat.mode})
 
 
 @require_POST

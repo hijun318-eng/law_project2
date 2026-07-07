@@ -1,4 +1,4 @@
-import { postJson, appendMessage, escapeHtml } from "./utils.js?v=2";
+import { postJson, appendMessage, escapeHtml, markdownToHtml } from "./utils.js?v=2";
 
 function renderLawSources(sources) {
     if (!sources || sources.length === 0) {
@@ -11,6 +11,55 @@ function renderLawSources(sources) {
     }).join("");
 }
 
+function renderPrecedents(precedents) {
+    if (!precedents || precedents.length === 0) {
+        return `<p class="empty-state">이 답변에 참고한 판례가 없습니다.</p>`;
+    }
+    return precedents.map((prec) => {
+        const heading = [prec.case_no, prec.category].filter(Boolean).join(" · ");
+        return `<article><strong>${escapeHtml(heading)}</strong><p>${escapeHtml(prec.content || "")}</p></article>`;
+    }).join("");
+}
+
+// case_based_answer 모드 답변(쉬운 요약/법적 근거/결론 구조)에서 "법적 근거" 섹션을 분리해
+// 카드 앞면(요약+결론)/뒷면(법적 근거) 두 장으로 나누고, 앞면 오른쪽 버튼으로 뒷면을,
+// 뒷면 왼쪽 버튼으로 다시 앞면을 보여주는 전환형 카드로 렌더링.
+function renderAnswerWithLegalBasis(markdown) {
+    const lines = String(markdown).split("\n");
+    const before = [];
+    const legal = [];
+    const after = [];
+    let section = "before";
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (section === "before" && /^##\s+법적\s*근거\s*$/.test(trimmed)) {
+            section = "legal";
+            continue;
+        }
+        if (section === "legal" && /^##\s+/.test(trimmed)) {
+            section = "after";
+        }
+        (section === "before" ? before : section === "legal" ? legal : after).push(line);
+    }
+
+    const beforeHtml = markdownToHtml(before.join("\n"));
+    const afterHtml = markdownToHtml(after.join("\n"));
+    if (legal.length === 0) {
+        return `${beforeHtml}${afterHtml}`;
+    }
+    const legalHtml = markdownToHtml(legal.join("\n"));
+    return `<div class="answer-flip">
+        <div class="answer-card" data-answer-face="front">
+            <button type="button" class="mini-button answer-flip-btn right" data-action="show-legal-basis">법적 근거 →</button>
+            ${beforeHtml}${afterHtml}
+        </div>
+        <div class="answer-card" data-answer-face="back" hidden>
+            <button type="button" class="mini-button answer-flip-btn left" data-action="show-summary">← 요약으로</button>
+            ${legalHtml}
+        </div>
+    </div>`;
+}
+
 export function initAdvice() {
     const adviceSection = document.querySelector("[data-advice-api]");
     if (!adviceSection) return;
@@ -20,17 +69,28 @@ export function initAdvice() {
     const messages = document.querySelector("#adviceMessages");
     const quick = document.querySelector("[data-quick-questions]");
     const drawer = document.querySelector("#lawDrawer");
-    const drawerBody = document.querySelector("[data-law-drawer-body]");
+    const lawDrawerBody = document.querySelector("[data-drawer-panel='law']");
+    const precedentDrawerBody = document.querySelector("[data-drawer-panel='precedent']");
+    const drawerTabs = document.querySelector("[data-drawer-tabs]");
     const historyApiBase = adviceSection.dataset.adviceHistoryApi?.replace(/0\/?$/, "");
 
     const openLawDrawer = (messageId) => {
-        if (!drawerBody) return;
-        drawerBody.innerHTML = `<p class="empty-state">불러오는 중...</p>`;
+        if (!lawDrawerBody || !precedentDrawerBody) return;
+        lawDrawerBody.innerHTML = `<p class="empty-state">불러오는 중...</p>`;
+        precedentDrawerBody.innerHTML = "";
+        drawerTabs?.querySelectorAll("[data-drawer-tab]").forEach((btn) => btn.classList.toggle("active", btn.dataset.drawerTab === "law"));
+        lawDrawerBody.hidden = false;
+        precedentDrawerBody.hidden = true;
         drawer.hidden = false;
         fetch(`${historyApiBase}${messageId}/`)
             .then((response) => response.json())
-            .then((data) => { drawerBody.innerHTML = renderLawSources(data.sources); })
-            .catch(() => { drawerBody.innerHTML = `<p class="empty-state">법령 원문을 불러오지 못했습니다.</p>`; });
+            .then((data) => {
+                lawDrawerBody.innerHTML = renderLawSources(data.sources?.law);
+                precedentDrawerBody.innerHTML = renderPrecedents(data.sources?.precedent);
+            })
+            .catch(() => {
+                lawDrawerBody.innerHTML = `<p class="empty-state">법령·판례를 불러오지 못했습니다.</p>`;
+            });
     };
 
     const send = (text) => {
@@ -41,7 +101,11 @@ export function initAdvice() {
         appendMessage(messages, "ai", "답변을 준비하고 있습니다...");
         postJson(adviceSection.dataset.adviceApi, { question }).then((data) => {
             messages.lastElementChild.remove();
-            appendMessage(messages, "ai", data.answer, true, false, data.message_id);
+            if (data.mode === "case_based_answer") {
+                appendMessage(messages, "ai", renderAnswerWithLegalBasis(data.answer), true, true, data.message_id);
+            } else {
+                appendMessage(messages, "ai", data.answer, true, false, data.message_id);
+            }
         });
     };
 
@@ -57,6 +121,19 @@ export function initAdvice() {
     messages?.addEventListener("click", (event) => {
         const drawerBtn = event.target.closest("[data-action='open-drawer']");
         if (drawerBtn) { openLawDrawer(drawerBtn.dataset.mid); return; }
+
+        const flipBtn = event.target.closest("[data-action='show-legal-basis'], [data-action='show-summary']");
+        if (flipBtn) {
+            const flip = flipBtn.closest(".answer-flip");
+            const front = flip?.querySelector("[data-answer-face='front']");
+            const back = flip?.querySelector("[data-answer-face='back']");
+            if (front && back) {
+                const showBack = flipBtn.dataset.action === "show-legal-basis";
+                front.hidden = showBack;
+                back.hidden = !showBack;
+            }
+            return;
+        }
 
         const fbBtn = event.target.closest("[data-action^='feedback_']");
         if (!fbBtn) return;
@@ -82,6 +159,14 @@ export function initAdvice() {
     });
     document.querySelectorAll("[data-close-drawer]").forEach((node) =>
         node.addEventListener("click", () => drawer.hidden = true));
+    drawerTabs?.addEventListener("click", (event) => {
+        const tabBtn = event.target.closest("[data-drawer-tab]");
+        if (!tabBtn) return;
+        drawerTabs.querySelectorAll("[data-drawer-tab]").forEach((btn) => btn.classList.toggle("active", btn === tabBtn));
+        const tab = tabBtn.dataset.drawerTab;
+        lawDrawerBody.hidden = tab !== "law";
+        precedentDrawerBody.hidden = tab !== "precedent";
+    });
 
     const initialQuestion = adviceSection.dataset.initialQuestion?.trim();
     if (initialQuestion) {
