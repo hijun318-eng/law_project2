@@ -120,6 +120,11 @@ USE_I18N = True
 USE_TZ = True
 
 
+# 세션 만료 (FR-002): 60분 미사용 시 만료, 매 요청마다 만료 시간 갱신(idle timeout)
+SESSION_COOKIE_AGE = 60 * 60
+SESSION_SAVE_EVERY_REQUEST = True
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 

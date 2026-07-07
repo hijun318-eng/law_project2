@@ -1,5 +1,6 @@
 import json
 
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
@@ -16,6 +17,10 @@ from monitoring.models import PriceConfig
 from engine.utils.execution_logger import clear_logger, get_logger, init_logger
 
 supervisor_engine = SupervisorEngine()
+
+# 로그인 잠금 (FR-009): 동일 계정 5회 연속 실패 시 10분간 로그인 차단
+LOGIN_FAIL_LIMIT = 5
+LOGIN_LOCKOUT_SECONDS = 10 * 60
 
 # advice.py quick_questions() → 인라인 상수
 _QUICK_QUESTIONS = [
@@ -84,9 +89,20 @@ def login_view(request):
         email = request.POST.get("email", "").strip().lower()
         password = request.POST.get("password", "").strip()
 
+        fail_key = f"login_fail:{email}"
+        fail_count = cache.get(fail_key, 0)
+        if fail_count >= LOGIN_FAIL_LIMIT:
+            return render(
+                request,
+                "labor/_login.html",
+                {"error": "로그인 시도가 너무 많습니다. 10분 후 다시 시도해주세요.", "email": email},
+                status=429,
+            )
+
         user = authenticate(request, username=email, password=password)
 
         if user is not None:
+            cache.delete(fail_key)
             auth_login(request, user)
             request.session["labor_user"] = {
                 "name": user.first_name,
@@ -95,6 +111,16 @@ def login_view(request):
                 "join_date": user.date_joined.strftime("%Y-%m-%d"),
             }
             return redirect("admin_console") if user.is_staff else redirect("landing")
+
+        fail_count += 1
+        cache.set(fail_key, fail_count, LOGIN_LOCKOUT_SECONDS)
+        if fail_count >= LOGIN_FAIL_LIMIT:
+            return render(
+                request,
+                "labor/_login.html",
+                {"error": "로그인 5회 실패로 10분간 로그인이 제한됩니다.", "email": email},
+                status=429,
+            )
 
         return render(
             request,
@@ -459,8 +485,10 @@ def calculate_api(request):
 
 
 def history_detail_api(request, history_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "로그인이 필요합니다."}, status=401)
     try:
-        chat = ChatHistory.objects.get(pk=history_id)
+        chat = ChatHistory.objects.get(pk=history_id, user=request.user)
     except ChatHistory.DoesNotExist:
         return JsonResponse({"error": "not found"}, status=404)
 
