@@ -9,6 +9,9 @@ from django.db.models.functions import TruncDay, TruncWeek, TruncMonth
 from monitoring.models import NodeExecutionLog, LLMUsageLog, PriceConfig
 from . import prompts
 
+# FR-152: 느린 세션 판정 임계치 (elapsed_ms는 ms 단위로 저장되므로 초 단위로 환산해 비교)
+SLOW_QUERY_THRESHOLD_MS = 20 * 1000
+
 
 def _pct_change_display(now_value: int, prev_value: int) -> str:
     """이전 대비 증감률을 '+12%' 형태 문자열로 반환. 이전 값이 0이면 신규 발생 여부로 판단."""
@@ -382,12 +385,12 @@ def _get_period_usage(period: str = 'day') -> list:
 
 
 def _get_slow_queries() -> list:
-    """elapsed_ms 총합이 10초를 초과하는 세션을 최대 5건 반환."""
+    """elapsed_ms 총합이 SLOW_QUERY_THRESHOLD_MS(20초)를 초과하는 세션을 최대 5건 반환."""
     slow_sessions = (
         NodeExecutionLog.objects
         .values('session_id')
         .annotate(total_ms=Sum('elapsed_ms'))
-        .filter(total_ms__gte=10.0)
+        .filter(total_ms__gte=SLOW_QUERY_THRESHOLD_MS)
         .order_by('-total_ms')[:5]
     )
     # 막대 너비용 최댓값
@@ -395,7 +398,7 @@ def _get_slow_queries() -> list:
     max_duration = max(all_durations) if all_durations else 1
     result = []
     for row in slow_sessions:
-        total_sec = round(row['total_ms'], 1)
+        total_sec = round(row['total_ms'] / 1000, 1)
         # bottleneck: 해당 세션에서 가장 오래 걸린 노드
         bottleneck_row = (
             NodeExecutionLog.objects

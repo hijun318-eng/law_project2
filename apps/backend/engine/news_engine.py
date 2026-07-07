@@ -110,6 +110,16 @@ class NewsEngine:
                 "observation":     obs,
             })
 
+            # 검색 결과가 없는 것과 API 자체 오류(한도초과/타임아웃 등)는 다르게 처리.
+            # 후자는 재검색해도 해결되지 않으므로 즉시 중단하고 상위(services.news)에서
+            # 캐시 폴백을 시도하도록 신호를 넘긴다.
+            if isinstance(obs, dict) and obs.get("error"):
+                return {
+                    "answer": "",
+                    "steps": steps,
+                    "api_error": True,
+                }
+
             evidence_list = obs.get("evidence", []) if isinstance(obs, dict) else []
 
             if not evidence_list:
