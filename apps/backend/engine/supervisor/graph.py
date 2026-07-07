@@ -6,10 +6,11 @@ Supervisor Graph — 복합 질문을 여러 서브 에이전트에 분배하는
   - rag_router_node: 법률/판례 RAG 실행
   - calculator_node: 수당/퇴직금 계산 실행
   - news_node: 최신 뉴스 검색 실행
-  - router_decision: 조건부 엣지 (supervisor 결정에 따라 라우팅)
+  - quality_review_node: 하위 에이전트 결과를 점검하고 누락 작업을 보완
+  - router_decision: 조건부 엣지 (supervisor/quality_review 결정에 따라 라우팅)
 
 흐름:
-  supervisor → (rag_router | calculator | news) → supervisor → ... → END
+  supervisor → (rag_router | calculator | news) → supervisor → quality_review → ... → END
 """
 from typing import TypedDict, Optional
 
@@ -17,9 +18,9 @@ from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from engine.config import llm
-from engine.rag_engine import RAGEngine
+from engine.router_engine import router_engine
 from engine.calculator_engine import CalculatorEngine
-from engine.tools.news_search_tool import NewsSearchTool
+from engine.news_engine import NewsEngine
 from engine.utils.execution_logger import log_node
 
 # ── 상수 ────────────────────────────────────────────────────
@@ -30,6 +31,7 @@ VALID_AGENTS = frozenset({"rag_router", "calculator", "news", "FINISH"})
 
 NODE_LABELS = {
     "supervisor":  "🤖 Supervisor",
+    "quality_review": "🧪 품질 점검",
     "rag_router":  "⚖️ 법률 RAG",
     "calculator":  "🧮 수당 계산기",
     "news":        "📰 최신 뉴스",
@@ -79,8 +81,11 @@ class SupervisorState(TypedDict):
     final_answer: str                            # 최종 통합 답변
     iteration: int                               # 현재까지 실행된 에이전트 수 (MAX_ITERATIONS 제한)
     error: str                                   # 에러 메시지
-    rag_sources: list                            # RAG 소스 문서 정보 (frontend 표시용)
+    rag_sources: list                            # RAG 법령 원문 (frontend 드로어 표시용)
+    rag_precedents: list                         # RAG 판례 원문 (frontend 드로어 표시용)
+    rag_category: str                            # RAG 카테고리
     rag_procedure: str
+    review_count: int
 
 
 # ── Node 함수 ────────────────────────────────────────────────
@@ -126,18 +131,19 @@ def supervisor_node(state: SupervisorState) -> dict:
     resp = llm.invoke(messages)
     raw = resp.content.strip().lower().replace('"', "").replace("'", "").replace(".", "").strip()
 
-    # 응답 파싱 — 포함된 키워드로 판단
-    next_agent = "FINISH"  # 기본값
-
-    if "rag" in raw or "법률" in raw:
-        if "rag" not in already_done:
-            next_agent = "rag_router"
+    # LLM 응답 파싱 — 정확히 일치하는 노드 ID를 우선하고,
+    # 형식이 어긋난 경우에만 키워드 포함 여부로 폴백 판단한다.
+    exact_matches = {"rag_router", "calculator", "news", "finish"}
+    if raw in exact_matches:
+        next_agent = "FINISH" if raw == "finish" else raw
+    elif "rag" in raw or "법률" in raw:
+        next_agent = "rag_router"
     elif "calc" in raw or "계산" in raw:
-        if "calculator" not in already_done:
-            next_agent = "calculator"
+        next_agent = "calculator"
     elif "news" in raw or "뉴스" in raw:
-        if "news" not in already_done:
-            next_agent = "news"
+        next_agent = "news"
+    else:
+        next_agent = "FINISH"
 
     # 중복 방지: 이미 실행된 에이전트는 FINISH 처리
     if next_agent != "FINISH":
@@ -155,11 +161,102 @@ def supervisor_node(state: SupervisorState) -> dict:
     return {"next": next_agent, "log": log_map.get(next_agent, "")}
 
 
+QUALITY_REVIEW_SYSTEM_PROMPT = """당신은 노동법률 AI 시스템의 품질 검토자입니다.
+사용자의 원본 질문과 지금까지 실행된 에이전트 결과를 보고, 질문에 제대로 답하기 위해
+반드시 필요한데 아직 실행되지 않은 에이전트가 있는지 판단하세요.
+
+## 전담 에이전트 목록
+- rag_router — 법률/판례 검색, 법적 판단, 대응 절차·신고 방법 근거
+- calculator — 수당/퇴직금/최저임금 등 금액 계산
+- news — 최신 노동법 뉴스/판결/정책 검색
+
+## 판단 규칙
+- 이미 실행된 에이전트는 다시 선택하지 마세요.
+- 질문에 답하는 데 꼭 필요한 작업만 보완 요청하세요. 과도한 보완 요청은 피하세요.
+- 충분하면 FINISH를 선택하세요.
+
+## 응답 형식
+반드시 아래 중 하나만 응답하세요 (따옴표 없이, 부가 설명 없이):
+rag_router
+calculator
+news
+FINISH"""
+
+
+@log_node
+def quality_review_node(state: SupervisorState) -> dict:
+    """
+    LLM이 하위 에이전트 결과를 점검하고, 질문 의도 대비 빠진 작업이 있으면 추가 실행을 지시한다.
+    """
+    intermediate = state.get("intermediate_results", {})
+    question = state["question"]
+    review_count = state.get("review_count", 0)
+
+    if review_count >= 2:
+        return {
+            "next": "FINISH",
+            "review_count": review_count + 1,
+            "log": "품질 점검 최대 횟수 도달",
+        }
+
+    already_done = [k for k in ("rag", "calculator", "news") if intermediate.get(k)]
+    done_summary = ", ".join(already_done) if already_done else "없음"
+
+    rag_answer = intermediate.get("rag", "")
+    rag_note = " (⚠️ 80자 미만으로 매우 짧음 — 보완 필요할 수 있음)" if rag_answer and len(rag_answer.strip()) < 80 else ""
+
+    context = (
+        f"\n[실행된 에이전트 결과]\n"
+        f"- rag_router: {'완료' + rag_note if intermediate.get('rag') else '미실행'}\n"
+        f"- calculator: {'완료' if intermediate.get('calculator') else '미실행'}\n"
+        f"- news: {'완료' if intermediate.get('news') else '미실행'}\n"
+        f"[이미 실행 완료된 에이전트 (재선택 금지)]\n"
+        f"{done_summary}\n\n"
+        f"보완이 필요한 에이전트:"
+    )
+
+    messages = [
+        SystemMessage(content=QUALITY_REVIEW_SYSTEM_PROMPT + context),
+        HumanMessage(content=f"사용자 질문: {question}"),
+    ]
+
+    resp = llm.invoke(messages)
+    raw = resp.content.strip().lower().replace('"', "").replace("'", "").replace(".", "").strip()
+
+    exact_matches = {"rag_router", "calculator", "news", "finish"}
+    if raw in exact_matches:
+        next_agent = "FINISH" if raw == "finish" else raw
+    elif "rag" in raw or "법률" in raw:
+        next_agent = "rag_router"
+    elif "calc" in raw or "계산" in raw:
+        next_agent = "calculator"
+    elif "news" in raw or "뉴스" in raw:
+        next_agent = "news"
+    else:
+        next_agent = "FINISH"
+
+    if next_agent != "FINISH":
+        agent_key = {"rag_router": "rag", "calculator": "calculator", "news": "news"}[next_agent]
+        if agent_key in already_done:
+            next_agent = "FINISH"
+
+    log_map = {
+        "rag_router": "품질 점검 보완 요청: 법률 답변 보완 필요",
+        "calculator": "품질 점검 보완 요청: 계산 결과 필요",
+        "news": "품질 점검 보완 요청: 최신 정보 검색 필요",
+        "FINISH": "품질 점검 통과",
+    }
+
+    return {
+        "next": next_agent,
+        "review_count": review_count + 1,
+        "log": log_map.get(next_agent, ""),
+    }
+
+
 @log_node
 def rag_router_node(state: SupervisorState) -> dict:
     """RAG 엔진 실행 — 법률/판례 검색 및 답변 생성"""
-    engine = RAGEngine()
-
     question = state["question"]
 
     # 이전에 계산 결과가 있으면 질문에 포함시켜 RAG가 활용하게 함
@@ -173,19 +270,18 @@ def rag_router_node(state: SupervisorState) -> dict:
             f"위 계산 결과를 참고하여 법률 답변을 생성해주세요."
         )
 
-    result = engine.answer(question)
-    procedure = result.get("procedure", "")
-    if procedure == "skip":
-        procedure = ""
+    result = router_engine.run(question)
     return {
         "intermediate_results": {
             **state.get("intermediate_results", {}),
-            "rag": result.get("answer", ""),
+            "rag": result.content,
         },
-        "rag_sources": result.get("sources", []),
+        "rag_sources": result.sources,
+        "rag_precedents": result.precedents,
+        "rag_category": result.category,
         "log": "법률 답변 생성 완료",
         "iteration": state.get("iteration", 0) + 1,
-        "rag_procedure": procedure,
+        "rag_procedure": result.procedure,
     }
 
 
@@ -207,20 +303,10 @@ def calculator_node(state: SupervisorState) -> dict:
 
 @log_node
 def news_node(state: SupervisorState) -> dict:
-    """뉴스 검색 실행 — 최신 노동법 뉴스/판결 검색"""
-    tool = NewsSearchTool()
-    res = tool.run(query=state["question"], display=5)
-
-    if res.success and res.data.get("results"):
-        items = res.data["results"]
-        content = "📰 **관련 최신 뉴스 검색 결과입니다.**\n\n"
-        for i, item in enumerate(items, 1):
-            title = item.get("title", "제목 없음")
-            link = item.get("link", "#")
-            desc = item.get("description", "")
-            content += f"**{i}. [{title}]({link})**\n> {desc}...\n\n"
-    else:
-        content = "⚠️ 관련 최신 뉴스를 찾을 수 없습니다."
+    """뉴스 검색 실행 — NewsEngine(LLM 재작성 + 재검색 루프)으로 최신 노동법 뉴스/판결 검색"""
+    news_engine = NewsEngine(llm)
+    res = news_engine.answer(state["question"])
+    content = res.get("answer") or "⚠️ 관련 최신 뉴스를 찾을 수 없습니다."
 
     return {
         "intermediate_results": {
@@ -242,6 +328,12 @@ def router_decision(state: SupervisorState) -> str:
     return state.get("next", "FINISH")
 
 
+def review_decision(state: SupervisorState) -> str:
+    if state.get("iteration", 0) >= MAX_ITERATIONS:
+        return "FINISH"
+    return state.get("next", "FINISH")
+
+
 # ── 그래프 빌드 ──────────────────────────────────────────────
 
 def _build_graph() -> StateGraph:
@@ -249,6 +341,7 @@ def _build_graph() -> StateGraph:
 
     # 노드 등록
     builder.add_node("supervisor",  supervisor_node)
+    builder.add_node("quality_review", quality_review_node)
     builder.add_node("rag_router",  rag_router_node)
     builder.add_node("calculator",  calculator_node)
     builder.add_node("news",        news_node)
@@ -260,6 +353,17 @@ def _build_graph() -> StateGraph:
     builder.add_conditional_edges(
         "supervisor",
         router_decision,
+        {
+            "rag_router": "rag_router",
+            "calculator": "calculator",
+            "news": "news",
+            "FINISH": "quality_review",
+        },
+    )
+
+    builder.add_conditional_edges(
+        "quality_review",
+        review_decision,
         {
             "rag_router": "rag_router",
             "calculator": "calculator",

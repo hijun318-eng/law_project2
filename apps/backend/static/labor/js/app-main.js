@@ -1,5 +1,5 @@
 import { initSidebar } from "./sidebar.js";
-import { initAdvice } from "./advice.js?v=7";
+import { initAdvice } from "./advice.js?v=8";
 import { initCalculator } from "./calculator.js";
 import { initNews } from "./news.js?v=4";
 import { markdownToHtml } from "./utils.js?v=2";

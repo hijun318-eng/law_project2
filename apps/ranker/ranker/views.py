@@ -1,5 +1,6 @@
 import json
 import logging
+from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -24,6 +25,9 @@ def rerank_view(request):
     Error response:
         {"error": "message"}
     """
+    if settings.RANKER_API_KEY and request.headers.get('X-Api-Key') != settings.RANKER_API_KEY:
+        return JsonResponse({'error': 'unauthorized'}, status=401)
+
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:

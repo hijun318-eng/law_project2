@@ -7,12 +7,15 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .services import calculator, dashboard, news
-from engine.router_engine import router_engine
+from engine.supervisor.engine import SupervisorEngine
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
 
 from chat.models import ChatHistory
 from monitoring.models import PriceConfig
+from engine.utils.execution_logger import clear_logger, get_logger, init_logger
+
+supervisor_engine = SupervisorEngine()
 
 # advice.py quick_questions() → 인라인 상수
 _QUICK_QUESTIONS = [
@@ -359,14 +362,28 @@ def advice_api(request):
 
     answer = ""
     try:
-        result = router_engine.run(question, session_id=str(chat.id))
-        answer = result.content
-        chat.mode = result.mode
-        chat.category = result.category
-        chat.sources = {"law": result.sources, "precedent": result.precedents}
+        init_logger(question)
+        result = supervisor_engine.answer(question)
+        answer = result.get("answer", "")
+        chat.mode = "supervisor"
+        chat.category = result.get("category", "")
+        chat.sources = {"law": result.get("sources", []), "precedent": result.get("precedents", [])}
     except Exception as e:
         answer = f"오류 발생: {str(e)}"
     finally:
+        query_logger = get_logger()
+        if query_logger:
+            query_logger.finish(answer)
+            print(
+                "[advice_api timing]",
+                {
+                    "total": query_logger.total_elapsed(),
+                    "nodes": query_logger.nodes,
+                },
+                flush=True,
+            )
+            query_logger.save()
+        clear_logger()
         chat.answer = answer
         chat.save()
 

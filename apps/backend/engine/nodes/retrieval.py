@@ -2,26 +2,38 @@ from pathlib import Path
 import re
 import requests
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
-def _call_ranker(query: str, documents: list[str], timeout: int = 600) -> list[float]:
+def _call_ranker(query: str, documents: list[str], timeout: int | None = None) -> list[float]:
     """랭커 마이크로서비스를 HTTP로 호출. 실패 시 균등 점수 fallback."""
+    api_key = ""
     try:
         from django.conf import settings
         ranker_url = settings.RANKER_URL
+        timeout = timeout or getattr(settings, "RANKER_TIMEOUT_SECONDS", 30)
+        api_key = getattr(settings, "RANKER_API_KEY", "")
     except (ImportError, AttributeError):
         ranker_url = 'http://localhost:8001'
+        timeout = timeout or 30
+
+    headers = {'X-Api-Key': api_key} if api_key else {}
 
     try:
         resp = requests.post(
             f'{ranker_url}/rerank/',
             json={'query': query, 'documents': documents},
-            timeout=timeout,
+            headers=headers,
+            timeout=(5, timeout),
         )
         resp.raise_for_status()
         data = resp.json()
-        return data.get('scores', [])
+        scores = data.get('scores', [])
+        if len(scores) != len(documents):
+            logger.warning("ranker score count mismatch: expected=%s actual=%s", len(documents), len(scores))
+            return [0.5] * len(documents)
+        return scores
     except requests.RequestException as e:
         logger.warning(f'랭커 호출 실패: {e}')
         return [0.5] * len(documents)
@@ -54,9 +66,20 @@ def retrieve_precedent_node(state: GraphState) -> dict:
         (question, doc.metadata.get("llm_brief", "") or doc.page_content[:1000])
         for doc in unique
     ]
-    scores = _call_ranker(question, [p[1] for p in pairs])
-
-    reranked = sorted(zip(unique, scores), key=lambda x: x[1], reverse=True)
+    documents_for_rerank = [p[1] for p in pairs]
+    if state.get("skip_rerank"):
+        logger.warning("ranker skipped: docs=%s reason=skip_rerank", len(documents_for_rerank))
+        reranked = [(doc, 0.0) for doc in unique]
+    else:
+        ranker_started_at = time.perf_counter()
+        scores = _call_ranker(question, documents_for_rerank) if documents_for_rerank else []
+        ranker_elapsed = time.perf_counter() - ranker_started_at
+        logger.warning(
+            "ranker timing: docs=%s elapsed_seconds=%.3f",
+            len(documents_for_rerank),
+            ranker_elapsed,
+        )
+        reranked = sorted(zip(unique, scores), key=lambda x: x[1], reverse=True)
 
     final = []
     for doc, score in reranked[:5]:

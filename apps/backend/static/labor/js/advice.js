@@ -101,11 +101,9 @@ export function initAdvice() {
         appendMessage(messages, "ai", "답변을 준비하고 있습니다...");
         postJson(adviceSection.dataset.adviceApi, { question }).then((data) => {
             messages.lastElementChild.remove();
-            if (data.mode === "case_based_answer") {
-                appendMessage(messages, "ai", renderAnswerWithLegalBasis(data.answer), true, true, data.message_id);
-            } else {
-                appendMessage(messages, "ai", data.answer, true, false, data.message_id);
-            }
+            // 답변에 "## 법적 근거" 섹션이 있으면 카드 전환 UI로, 없으면 그대로 렌더링
+            // (mode는 이제 "supervisor"로 통일되어 있어 문자열로 분기하지 않음)
+            appendMessage(messages, "ai", renderAnswerWithLegalBasis(data.answer), true, true, data.message_id);
         });
     };
 

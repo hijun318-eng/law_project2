@@ -1,0 +1,30 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    HF_HOME=/root/.cache/huggingface \
+    TRANSFORMERS_CACHE=/root/.cache/huggingface \
+    RERANKER_DEVICE=cuda \
+    RERANKER_BATCH_SIZE=4 \
+    RERANKER_MAX_DOCUMENTS=30 \
+    RERANKER_MAX_CHARS=1800
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu124
+
+COPY apps/ranker/requirements.txt apps/ranker/requirements.txt
+RUN pip install --no-cache-dir -r apps/ranker/requirements.txt
+
+COPY apps/ranker/ apps/ranker/
+
+WORKDIR /app/apps/ranker
+EXPOSE 8001
+
+CMD ["gunicorn", "ranker.wsgi:application", "--bind", "0.0.0.0:8001", "--workers", "1", "--threads", "1", "--timeout", "600", "--preload"]

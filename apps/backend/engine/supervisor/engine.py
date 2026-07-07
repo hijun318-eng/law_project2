@@ -24,7 +24,10 @@ class SupervisorEngine:
         self.graph = supervisor_graph
 
     def stream_answer(self, question: str):
-        init_logger(question)
+        logger_created = False
+        if get_logger() is None:
+            init_logger(question)
+            logger_created = True
 
         state = {
             "question": question,
@@ -36,6 +39,7 @@ class SupervisorEngine:
             "error": "",
             "rag_sources": [],
             "rag_procedure": "",
+            "review_count": 0,
         }
 
         latest_state = dict(state)
@@ -53,7 +57,7 @@ class SupervisorEngine:
         procedure = latest_state.get("rag_procedure", "")
 
         logger = get_logger()
-        if logger:
+        if logger_created and logger:
             logger.finish(answer)
             logger.save()
             clear_logger()
@@ -65,7 +69,10 @@ class SupervisorEngine:
         })
 
     def answer(self, question: str) -> dict:
-        init_logger(question)
+        logger_created = False
+        if get_logger() is None:
+            init_logger(question)
+            logger_created = True
 
         result = self.graph.invoke({
             "question": question,
@@ -76,19 +83,31 @@ class SupervisorEngine:
             "iteration": 0,
             "error": "",
             "rag_sources": [],
+            "rag_precedents": [],
+            "rag_category": "",
             "rag_procedure": "",
+            "review_count": 0,
         })
         answer_text = self._build_final_answer(result)
         sources = result.get("rag_sources", [])
+        precedents = result.get("rag_precedents", [])
+        category = result.get("rag_category", "")
         procedure = result.get("rag_procedure", "")
 
         logger = get_logger()
-        if logger:
+        if logger_created and logger:
             logger.finish(answer_text)
             logger.save()
             clear_logger()
 
-        return {"answer": answer_text, "procedure": procedure, "sources": sources}
+        return {
+            "answer": answer_text,
+            "procedure": procedure,
+            "sources": sources,
+            "precedents": precedents,
+            "category": category,
+            "mode": "supervisor",
+        }
 
     @staticmethod
     def _build_final_answer(state: dict) -> str:
