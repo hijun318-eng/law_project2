@@ -1,4 +1,4 @@
-import { escapeHtml } from "./utils.js";
+import { escapeHtml, markdownToHtml } from "./utils.js";
 
 function renderNews(item) {
     return `<article class="news-card"><header><time>${escapeHtml(item.date)}</time></header><h2>${escapeHtml(item.title)}</h2><p>${escapeHtml(item.summary)}</p></article>`;
@@ -12,6 +12,11 @@ export function initNews() {
     const query = document.querySelector("#newsQuery");
     const list = document.querySelector("#newsList");
     const summary = document.querySelector("#newsSummary");
+
+    // 서버 렌더링 시 삽입된 마크다운 원문(요약)을 HTML로 변환
+    if (summary?.textContent.trim()) {
+        summary.innerHTML = markdownToHtml(summary.textContent);
+    }
 
     let requestToken = 0;
 
@@ -31,7 +36,7 @@ export function initNews() {
                 if (token !== requestToken) return;
 
                 const items = Array.isArray(data.items) ? data.items : [];
-                summary.textContent = items.length ? (data.summary || "") : "관련 뉴스를 찾지 못했습니다";
+                summary.innerHTML = items.length ? markdownToHtml(data.summary || "") : "관련 뉴스를 찾지 못했습니다";
                 list.innerHTML = items.length
                     ? items.map(renderNews).join("")
                     : `<div class="empty-state">관련 뉴스를 찾지 못했습니다</div>`;
