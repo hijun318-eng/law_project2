@@ -6,16 +6,13 @@ from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .services import calculator, dashboard
+from .services import calculator, dashboard, news
 from engine.router_engine import router_engine
-from engine.tools.news_search_tool import NewsSearchTool
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
 
 from chat.models import ChatHistory
 from monitoring.models import PriceConfig
-
-news_search_tool = NewsSearchTool()
 
 # advice.py quick_questions() → 인라인 상수
 _QUICK_QUESTIONS = [
@@ -172,21 +169,11 @@ def user_app(request):
     if page not in {"home", "calculator", "news", "mypage"}:
         page = "home"
 
-    # NewsSearchTool 직접 호출
-    news_res = news_search_tool.run(query="노동법", display=10)
-    news_items = []
-    if news_res.success and news_res.data.get("results"):
-        for i, item in enumerate(news_res.data["results"], start=1):
-            news_items.append({
-                "id": i,
-                "title": item.get("title", ""),
-                "date": _format_pubdate(item.get("pubDate", "")),
-                "summary": item.get("description", ""),
-            })
-    news_summary_text = (
-        f"최신 노동법 뉴스 {len(news_items)}건" if news_items
-        else "뉴스를 불러오지 못했습니다."
-    )
+    # 뉴스 탭일 때만 NewsEngine 호출 (다른 탭에서는 불필요한 LLM 호출을 피함)
+    if page == "news":
+        news_items, news_summary_text = news.get_news()
+    else:
+        news_items, news_summary_text = [], ""
 
     return render(
         request,
@@ -473,22 +460,7 @@ def history_detail_api(request, history_id):
 
 def news_api(request):
     query = request.GET.get("q", "")
-
-    res = news_search_tool.run(query=query if query.strip() else "노동법", display=10)
-
-    if res.success and res.data.get("results"):
-        items = []
-        for item in res.data["results"]:
-            items.append({
-                "title": item.get("title", ""),
-                "summary": item.get("description", ""),
-                "date": _format_pubdate(item.get("pubDate", "")),
-            })
-        summary_text = f"'{query}' 관련 {len(items)}건의 뉴스를 찾았습니다." if query else f"최신 노동법 뉴스 {len(items)}건"
-    else:
-        items = []
-        summary_text = "뉴스를 불러오지 못했습니다."
-
+    items, summary_text = news.get_news(query)
     return JsonResponse({"items": items, "summary": summary_text})
 
 
@@ -508,13 +480,3 @@ def _float(value, default: float) -> float:
         return float(str(value).replace(",", ""))
     except (TypeError, ValueError):
         return default
-
-
-def _format_pubdate(pubdate: str) -> str:
-    """Naver API pubDate (예: 'Tue, 30 Jun 2026 10:30:00 +0900') → '2026-06-30'"""
-    import datetime
-    try:
-        dt = datetime.datetime.strptime(pubdate.split(" +")[0].split(" -")[0], "%a, %d %b %Y %H:%M:%S")
-        return dt.strftime("%Y-%m-%d")
-    except (ValueError, IndexError):
-        return pubdate[:10] if len(pubdate) >= 10 else ""

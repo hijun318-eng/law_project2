@@ -1,7 +1,8 @@
 import { initSidebar } from "./sidebar.js";
-import { initAdvice } from "./advice.js";
+import { initAdvice } from "./advice.js?v=2";
 import { initCalculator } from "./calculator.js";
-import { initNews } from "./news.js";
+import { initNews } from "./news.js?v=4";
+import { markdownToHtml } from "./utils.js?v=2";
 
 console.log("[app-main] module started");
 initSidebar();
@@ -29,23 +30,6 @@ console.log("[app-main] other inits done");
             p.hidden = p.dataset.tabPanel !== btn.dataset.tab;
         });
     });
-
-    // 간단한 마크다운 렌더러 (API 응답 표시용)
-    function renderMd(text) {
-        if (!text) return "";
-        let h = String(text);
-        h = h.replace(/[&<>]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;" })[c]);
-        h = h.replace(/```(\w*)\s*([\s\S]*?)```/g, "<pre><code>$2</code></pre>");
-        h = h.replace(/`([^`\n]+)`/g, "<code>$1</code>");
-        h = h.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
-        h = h.replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
-        h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-        h = h.replace(/^### (.+)$/gm, "<h4>$1</h4>");
-        h = h.replace(/^## (.+)$/gm, "<h3>$1</h3>");
-        h = h.replace(/^[\s]*[-*] (.+)$/gm, "<li>$1</li>");
-        h = h.replace(/\n/g, "<br>");
-        return h;
-    }
 
     const historyCards = document.querySelectorAll("[data-history-id]");
     // ------ 아코디언 (historyPanel 위임) ------
@@ -90,8 +74,8 @@ console.log("[app-main] other inits done");
                 if (data.error) {
                     if (msgUser) msgUser.textContent = "데이터를 불러올 수 없습니다.";
                 } else {
-                    if (msgUser) msgUser.innerHTML = renderMd(data.question);
-                    if (msgAi) msgAi.innerHTML = renderMd(data.answer || "(답변 없음)");
+                    if (msgUser) msgUser.innerHTML = markdownToHtml(data.question);
+                    if (msgAi) msgAi.innerHTML = markdownToHtml(data.answer || "(답변 없음)");
                     chatWin.dataset.loaded = "true";
                 }
             } catch {
