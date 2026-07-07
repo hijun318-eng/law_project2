@@ -8,7 +8,7 @@
 [Backend EC2]
 Django backend
 vector_db / data 보유
-RANKER_URL=http://Ranker-Private-IP:8001
+RANKER_URL=http://Ranker-Private-IP:8001/rerank/
 
         VPC 내부 통신
 
@@ -86,7 +86,7 @@ NAVER_CLIENT_SECRET=...
 DJANGO_SECRET_KEY=...
 DEBUG=False
 ALLOWED_HOSTS=BACKEND_PUBLIC_IP,localhost,127.0.0.1
-RANKER_URL=http://RANKER_PRIVATE_IP:8001
+RANKER_URL=http://RANKER_PRIVATE_IP:8001/rerank/
 ```
 
 `RANKER_PRIVATE_IP`에는 Ranker GPU EC2의 private IP를 넣습니다.

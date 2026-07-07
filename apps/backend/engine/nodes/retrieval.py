@@ -15,14 +15,14 @@ def _call_ranker(query: str, documents: list[str], timeout: int | None = None) -
         timeout = timeout or getattr(settings, "RANKER_TIMEOUT_SECONDS", 30)
         api_key = getattr(settings, "RANKER_API_KEY", "")
     except (ImportError, AttributeError):
-        ranker_url = 'http://localhost:8001'
+        ranker_url = 'http://localhost:8001/rerank/'
         timeout = timeout or 30
 
     headers = {'X-Api-Key': api_key} if api_key else {}
 
     try:
         resp = requests.post(
-            f'{ranker_url}/rerank/',
+            ranker_url,
             json={'query': query, 'documents': documents},
             headers=headers,
             timeout=(5, timeout),

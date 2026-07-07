@@ -24,7 +24,7 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=backend.settings
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend
-      - RANKER_URL=http://ranker:8001
+      - RANKER_URL=http://ranker:8001/rerank/
     volumes:
       - ../vector_db:/app/vector_db
       - ../data:/app/data

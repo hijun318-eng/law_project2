@@ -48,7 +48,7 @@ NAVER_CLIENT_SECRET=...
 DJANGO_SECRET_KEY=...
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
-RANKER_URL=http://localhost:8001
+RANKER_URL=http://localhost:8001/rerank/
 ```
 
 ### 3. 데이터 전처리 (최초 1회)
