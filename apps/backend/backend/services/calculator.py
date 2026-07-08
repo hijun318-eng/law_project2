@@ -168,16 +168,20 @@ def calculate_form(
     return calc_retirement(int(months // 12), int(months % 12), salary * 3)
 
 
-def calculate_natural(text: str) -> tuple[str, CalcResult | None]:
+def calculate_natural(text: str, conversation_history: list | None = None) -> tuple[str, CalcResult | None]:
     """
     LLM 기반 자연어 계산 처리.
     LangGraph ReAct 에이전트(gpt-5.4-nano)가 자연어에서 파라미터를 추출하고
     engine/calculator/core.py의 순수 계산 함수를 도구로 호출하여 결과를 반환합니다.
+
+    conversation_history: 이전 대화 턴 [{"role": "user"/"assistant", "content": str}, ...].
+    에이전트가 "몇 년 근무하셨나요?" 같은 되물음 후 사용자가 답만 보내는 경우에도
+    이전에 말한 근속연수 등을 잊지 않도록 함께 전달한다.
     """
     try:
         from engine.calculator_engine import CalculatorEngine
         engine = CalculatorEngine()
-        result = engine.calculate(text)
+        result = engine.calculate(text, conversation_history)
         return result.get("answer", "죄송합니다. 결과를 생성하지 못했습니다."), None
     except Exception as e:
         return f"죄송합니다. 계산 중 오류가 발생했습니다: {e}", None
