@@ -4,7 +4,7 @@ import { initAdminUsers } from "./admin-users.js";
 import { initAdminFeedback } from "./admin-feedback.js";
 import { initAdminPrompts } from "./admin-prompts.js";
 // import { initAdminVectorDB } from "./admin-vectordb.js";
-import { initAdminPerformance } from "./admin-performance.js";
+import { initAdminPerformance } from "./admin-performance.js?v=2";
 
 initSidebar();
 initAdminDashboard();

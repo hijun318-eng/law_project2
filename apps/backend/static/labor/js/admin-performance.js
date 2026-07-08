@@ -1,3 +1,5 @@
+import { csrf } from "./utils.js?v=2";
+
 const PERIOD_LABELS = {
     day: "최근 30일",
     week: "최근 12주",
@@ -142,31 +144,53 @@ export function initAdminPerformance() {
     const renderPriceConfig = (configs) => {
         const tbody = document.getElementById("priceConfigBody");
         if (!tbody) return;
-        if (!configs || configs.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--text-muted);">설정된 가격 정보가 없습니다.</td></tr>';
-            return;
-        }
-        tbody.innerHTML = configs.map((cfg) => `
+        const existingRowsHtml = (!configs || configs.length === 0)
+            ? '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--text-muted);">설정된 가격 정보가 없습니다.</td></tr>'
+            : configs.map((cfg) => `
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:10px 8px;font-weight:600;">${cfg.model_name}</td>
+                    <td style="padding:10px 8px;text-align:right;">
+                        <input type="number" step="0.01" min="0" value="${cfg.prompt_token_price}"
+                            class="price-input" data-model="${cfg.model_name}" data-type="prompt"
+                            style="width:90px;text-align:right;padding:4px 8px;border:1px solid var(--border);border-radius:4px;">
+                    </td>
+                    <td style="padding:10px 8px;text-align:right;">
+                        <input type="number" step="0.01" min="0" value="${cfg.completion_token_price}"
+                            class="price-input" data-model="${cfg.model_name}" data-type="completion"
+                            style="width:90px;text-align:right;padding:4px 8px;border:1px solid var(--border);border-radius:4px;">
+                    </td>
+                    <td style="padding:10px 8px;text-align:center;">
+                        <button type="button" class="btn-save-price" data-model="${cfg.model_name}"
+                            style="padding:4px 16px;border:1px solid var(--accent);border-radius:4px;background:var(--accent);color:#fff;cursor:pointer;">
+                            저장
+                        </button>
+                    </td>
+                </tr>
+            `).join("");
+
+        const addRowHtml = `
             <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:10px 8px;font-weight:600;">${cfg.model_name}</td>
+                <td style="padding:10px 8px;">
+                    <input type="text" id="newModelName" placeholder="예: gpt-4o"
+                        style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:4px;">
+                </td>
                 <td style="padding:10px 8px;text-align:right;">
-                    <input type="number" step="0.01" min="0" value="${cfg.prompt_token_price}"
-                        class="price-input" data-model="${cfg.model_name}" data-type="prompt"
+                    <input type="number" step="0.01" min="0" id="newModelPromptPrice" placeholder="0.00"
                         style="width:90px;text-align:right;padding:4px 8px;border:1px solid var(--border);border-radius:4px;">
                 </td>
                 <td style="padding:10px 8px;text-align:right;">
-                    <input type="number" step="0.01" min="0" value="${cfg.completion_token_price}"
-                        class="price-input" data-model="${cfg.model_name}" data-type="completion"
+                    <input type="number" step="0.01" min="0" id="newModelCompletionPrice" placeholder="0.00"
                         style="width:90px;text-align:right;padding:4px 8px;border:1px solid var(--border);border-radius:4px;">
                 </td>
                 <td style="padding:10px 8px;text-align:center;">
-                    <button type="button" class="btn-save-price" data-model="${cfg.model_name}"
-                        style="padding:4px 16px;border:1px solid var(--accent);border-radius:4px;background:var(--accent);color:#fff;cursor:pointer;">
-                        저장
+                    <button type="button" id="btnAddPriceConfig"
+                        style="padding:4px 16px;border:1px solid var(--accent);border-radius:4px;background:transparent;color:var(--accent);cursor:pointer;">
+                        + 추가
                     </button>
                 </td>
-            </tr>
-        `).join("");
+            </tr>`;
+
+        tbody.innerHTML = existingRowsHtml + addRowHtml;
 
         // 저장 버튼 이벤트
         tbody.querySelectorAll(".btn-save-price").forEach((btn) => {
@@ -179,22 +203,39 @@ export function initAdminPerformance() {
                 savePriceConfig(model, promptPrice, completionPrice, btn);
             });
         });
+
+        // 새 모델 추가 버튼 이벤트
+        document.getElementById("btnAddPriceConfig")?.addEventListener("click", () => {
+            const nameInput = document.getElementById("newModelName");
+            const promptInput = document.getElementById("newModelPromptPrice");
+            const completionInput = document.getElementById("newModelCompletionPrice");
+            const modelName = nameInput.value.trim();
+            if (!modelName) {
+                nameInput.focus();
+                return;
+            }
+            const promptPrice = parseFloat(promptInput.value) || 0;
+            const completionPrice = parseFloat(completionInput.value) || 0;
+            addPriceConfig(modelName, promptPrice, completionPrice);
+        });
     };
+
+    const postPriceConfig = (modelName, promptPrice, completionPrice) => fetch("/api/admin/performance/price-config/", {
+        method: "POST",
+        headers: {"Content-Type": "application/json", "X-CSRFToken": csrf()},
+        body: JSON.stringify({
+            model_name: modelName,
+            prompt_token_price: promptPrice,
+            completion_token_price: completionPrice,
+        }),
+    });
 
     const savePriceConfig = async (modelName, promptPrice, completionPrice, btn) => {
         const originalText = btn.textContent;
         btn.textContent = "저장 중...";
         btn.disabled = true;
         try {
-            const res = await fetch("/api/admin/performance/price-config/", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    model_name: modelName,
-                    prompt_token_price: promptPrice,
-                    completion_token_price: completionPrice,
-                }),
-            });
+            const res = await postPriceConfig(modelName, promptPrice, completionPrice);
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
                 throw new Error(errData.error || `요청 실패 (${res.status})`);
@@ -215,6 +256,28 @@ export function initAdminPerformance() {
                 btn.style.background = "";
                 btn.disabled = false;
             }, 2000);
+        }
+    };
+
+    const addPriceConfig = async (modelName, promptPrice, completionPrice) => {
+        const btn = document.getElementById("btnAddPriceConfig");
+        if (btn) { btn.textContent = "추가 중..."; btn.disabled = true; }
+        try {
+            const res = await postPriceConfig(modelName, promptPrice, completionPrice);
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || `요청 실패 (${res.status})`);
+            }
+            await fetchPriceConfig();
+        } catch (err) {
+            console.error("모델 추가 실패:", err);
+            if (btn) {
+                btn.textContent = "✗ 실패";
+                setTimeout(() => {
+                    btn.textContent = "+ 추가";
+                    btn.disabled = false;
+                }, 2000);
+            }
         }
     };
 
