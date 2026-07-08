@@ -107,6 +107,10 @@ export function initCalculator() {
         }).then((data) => result.innerHTML = renderResult(data.result));
     });
 
+    // ReAct 에이전트가 "월급이 얼마였나요?" 처럼 되물었을 때, 사용자가 답만 입력해도
+    // 이전에 말한 근속연수 등을 잊지 않도록 대화 기록을 유지해 매 요청마다 함께 보낸다.
+    const naturalCalcHistory = [];
+
     document.querySelector("#naturalCalcForm")?.addEventListener("submit", (event) => {
         event.preventDefault();
         const input = document.querySelector("#naturalCalcInput");
@@ -114,12 +118,14 @@ export function initCalculator() {
         const text = input.value.trim();
         if (!text) return;
         appendMessage(messages, "user", text);
-        postJson(calcSection.dataset.calcApi, { mode: "chat", text }).then((data) => {
+        postJson(calcSection.dataset.calcApi, { mode: "chat", text, history: naturalCalcHistory }).then((data) => {
             if (data.result) {
                 appendMessage(messages, "ai", renderResult(data.result), false, true);
             } else {
                 appendMessage(messages, "ai", data.message, false, false);
             }
+            naturalCalcHistory.push({ role: "user", content: text });
+            naturalCalcHistory.push({ role: "assistant", content: data.message });
             input.value = "";
         });
     });
