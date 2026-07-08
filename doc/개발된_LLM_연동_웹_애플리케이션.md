@@ -11,9 +11,9 @@
 | 1. 프론트엔드 구현 완성도 | HTML5/CSS3 반응형 마크업, ES6+ 문법, DOM/이벤트 처리 | ✅ 충족 |
 | 2. 비동기 LLM 연동 구현 | Async/Await·Fetch API 외부 API 호출, 예외·로딩 처리 | ✅ 충족 |
 | 3. Django 백엔드 구현 | MVT/ORM/FBV·CBV/폼 검증/인증·권한 처리 | ⚠️ 부분 충족 |
-| 4. 배포·운영 구현 | AWS(EC2·RDS·S3)와 Docker 기반 배포 | ⚠️ 부분 충족 (RDS 연동 예정) |
+| 4. 배포·운영 구현 | AWS(EC2·RDS·S3)와 Docker 기반 배포 | ⚠️ 부분 충족 (RDS 연동 예정, S3는 vector_db 동기화 용도로 구현됨) |
 
-> 3, 4번 항목의 미비점은 각 섹션 하단 "미구현/차이" 박스와 문서 맨 끝 [보완 제언](#보완-제언)에 정리했습니다. RDS·S3는 도입 예정이며, 현재 진행 상황은 4번 섹션과 [보완 제언](#보완-제언)에 정리했습니다.
+> 3, 4번 항목의 미비점은 각 섹션 하단 "미구현/차이" 박스와 문서 맨 끝 [보완 제언](#보완-제언)에 정리했습니다. RDS는 도입 예정, S3는 vector_db 동기화 용도로 이미 구현되어 있으며, 현재 진행 상황은 4번 섹션과 [보완 제언](#보완-제언)에 정리했습니다.
 
 ---
 
@@ -116,7 +116,7 @@
 
 ## 4. 배포·운영 구현
 
-**결론: Docker + Nginx + EC2 2대 분리 배포 + CI는 구성됨. RDS는 연동 코드가 구현되어 있고 전환 예정, S3는 아직 미착수 (아래 "미구현" 참고)**
+**결론: Docker + Nginx + EC2 2대 분리 배포 + CI는 구성됨. RDS는 연동 코드가 구현되어 있고 전환 예정, S3는 벡터 DB 동기화 용도로 구현됨 (아래 "미구현" 참고)**
 
 ### Docker / Nginx
 
@@ -159,9 +159,18 @@ DB 계층은 `DATABASE_URL` 환경변수 유무로 SQLite/RDS를 전환하도록
 
 > `DATABASE_URL`이 비어 있으면 기존처럼 SQLite로 동작 — 로컬 개발 환경은 그대로 두고 배포 환경만 RDS로 전환 가능.
 
-### AWS S3 스토리지 (예정)
+### AWS S3 스토리지 — Chroma vector_db 동기화
+**배포 시 Chroma 벡터 DB를 S3와 동기화**하는 형태로 S3를 사용:
 
-정적/미디어 파일의 S3 전환은 아직 착수 전이며, 현재는 WhiteNoise + nginx `/static/` alias 조합으로 정적파일을 서빙 중. 도입 시 `django-storages`+`boto3` 추가, `STORAGES`/`AWS_STORAGE_BUCKET_NAME` 등 설정, 버킷 정책·IAM 권한 구성이 필요.
+| 구현 내용 | 근거 |
+|---|---|
+| GitHub Actions 배포 스텝에서 `aws s3 sync`로 `vector_db/` 복원 | `.github/workflows/deploy-ec2.yml:28-41` |
+| S3 URI를 시크릿으로 주입 (`VECTOR_DB_S3_URI`), 미설정 시 스킵 | 위 워크플로 조건문 (`if [ -n "${{ secrets.VECTOR_DB_S3_URI }}" ]`) |
+| EC2에 AWS CLI 미설치 시 자동 설치 후 `aws s3 sync ... --delete` 실행 | 위 워크플로 |
+
+> Chroma `vector_db`는 대용량 임베딩 인덱스라 Git/이미지에 포함하지 않고, 배포 때마다 S3에서 최신본을 내려받는 방식으로 운영. `doc/rds-postgres-migration.md`에서도 "Chroma vector_db는 RDS 대상이 아니며 별도 벡터 저장소/백업으로 다룬다"고 명시한 부분이 이 S3 동기화로 실현됨.
+>
+> 원래 `deploy` 브랜치(커밋 `03870d9` "Sync vector DB from S3 during deploy")에만 있던 구현을 `main`의 `deploy-ec2.yml`에도 반영함.
 
 ### 환경변수 / CI
 
@@ -181,11 +190,11 @@ DB 계층은 `DATABASE_URL` 환경변수 유무로 SQLite/RDS를 전환하도록
 | CBV | 미사용 — 전체 FBV로만 구현 |
 | Django Form/ModelForm | 미사용 — 뷰 함수 내 수동 검증(`if not name or not email...`)으로 대체 |
 | RDS | 연동 코드 구현 완료, 실사용은 전환 예정 — `settings.py:91-107`에서 `DATABASE_URL` 유무로 SQLite/PostgreSQL(RDS) 분기, 현재는 env 미설정으로 SQLite 사용 중 |
-| S3 | 미착수 — 정적파일은 WhiteNoise + nginx `/static/` alias 조합, `django-storages`/`boto3` 미도입 |
+| S3 | vector_db 동기화 용도로 구현 완료 — `main`의 `.github/workflows/deploy-ec2.yml`에서 배포 시 `aws s3 sync`로 Chroma `vector_db/` 복원. 정적/미디어 파일용 `django-storages`/`boto3`는 미도입 |
 
 ## 보완 제언
 
 1. **CBV 추가** — 관리자 대시보드류 뷰 1~2개를 `View`/`TemplateView`로 리팩터링
 2. **Django Form 도입** — `register_view()`의 수동 검증을 `RegisterForm(forms.Form)` + `clean_*`로 전환
 3. **RDS 전환** — 코드(`DATABASE_URL` 분기)는 준비됨. `doc/rds-postgres-migration.md` 절차대로 RDS 인스턴스 생성 후 EC2 `.env`에 `DATABASE_URL` 설정만 하면 전환 완료
-4. **S3 스토리지** — `django-storages`+`boto3` 추가, `STORAGES` 설정 및 버킷/IAM 구성으로 정적·미디어 파일 전환 (신규 착수 필요)
+4. **정적/미디어 파일 S3화 (선택)** — 필요 시 `django-storages`+`boto3` 추가, `STORAGES` 설정 및 버킷/IAM 구성으로 확장 가능
