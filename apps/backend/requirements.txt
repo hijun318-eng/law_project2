@@ -14,3 +14,5 @@ requests==2.34.2
 beautifulsoup4==4.15.0
 Pillow==12.2.0
 gunicorn
+dj-database-url
+psycopg[binary]
