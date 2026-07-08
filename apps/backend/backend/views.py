@@ -9,6 +9,7 @@ from django.views import View
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
+from .forms import PriceConfigForm, RegisterForm, first_error_message
 from .services import calculator, dashboard, news
 from engine.supervisor.engine import SupervisorEngine
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
@@ -140,28 +141,22 @@ def login_view(request):
 
 def register_view(request):
     if request.method == "POST":
-        name = request.POST.get("name", "").strip()
-        email = request.POST.get("email", "").strip().lower()
-        password = request.POST.get("password", "")
-        password_confirm = request.POST.get("password_confirm", "")
-
-        error = None
-        if not name or not email or not password or not password_confirm:
-            error = "모든 항목을 입력해주세요."
-        elif User.objects.filter(username=email).exists():
-            error = "이미 가입된 이메일이 있습니다."
-        elif password != password_confirm:
-            error = "비밀번호가 일치하지 않습니다."
-        elif len(password) < 8:
-            error = "비밀번호는 8자 이상이어야 합니다."
-
-        if error:
+        form = RegisterForm(request.POST)
+        if not form.is_valid():
             return render(
                 request,
                 "labor/_register.html",
-                {"error": error, "name": name, "email": email},
+                {
+                    "error": first_error_message(form),
+                    "name": request.POST.get("name", ""),
+                    "email": request.POST.get("email", ""),
+                },
                 status=400,
             )
+
+        name = form.cleaned_data["name"]
+        email = form.cleaned_data["email"]
+        password = form.cleaned_data["password"]
 
         user = User.objects.create_user(
             username=email,
@@ -323,28 +318,16 @@ class PriceConfigView(UserPassesTestMixin, View):
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-        model_name = data.get("model_name", "").strip()
-        if not model_name:
-            return JsonResponse({"error": "model_name is required"}, status=400)
+        # model_name이 이미 있는 모델이면 그 레코드에 덧씌워 update_or_create와 동일하게 동작
+        model_name = (data.get("model_name") or "").strip()
+        instance = PriceConfig.objects.filter(model_name=model_name).first() if model_name else None
+        form = PriceConfigForm(data, instance=instance)
+        if not form.is_valid():
+            return JsonResponse({"error": first_error_message(form)}, status=400)
 
-        try:
-            prompt_price = float(data.get("prompt_token_price", 0))
-            completion_price = float(data.get("completion_token_price", 0))
-        except (TypeError, ValueError):
-            return JsonResponse({"error": "Prices must be numbers"}, status=400)
-
-        if prompt_price < 0 or completion_price < 0:
-            return JsonResponse({"error": "Prices cannot be negative"}, status=400)
-
-        user_name = request.user.get_full_name() or request.user.username or "admin"
-        PriceConfig.objects.update_or_create(
-            model_name=model_name,
-            defaults={
-                "prompt_token_price": prompt_price,
-                "completion_token_price": completion_price,
-                "updated_by": user_name,
-            }
-        )
+        price_config = form.save(commit=False)
+        price_config.updated_by = request.user.get_full_name() or request.user.username or "admin"
+        price_config.save()
         return JsonResponse({"ok": True})
 
 
