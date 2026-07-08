@@ -27,6 +27,13 @@ SECRET_KEY = config('DJANGO_SECRET_KEY', default='django-insecure--!+jvo+4b#no8+
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in config('CSRF_TRUSTED_ORIGINS', default='').split(',')
+    if origin.strip()
+]
+USE_X_FORWARDED_HOST = config('USE_X_FORWARDED_HOST', default=True, cast=bool)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 RANKER_URL = config('RANKER_URL', default='http://localhost:8001/rerank/')
 RANKER_TIMEOUT_SECONDS = config('RANKER_TIMEOUT_SECONDS', default=30, cast=int)

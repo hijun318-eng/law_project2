@@ -1,10 +1,21 @@
 services:
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - staticfiles:/staticfiles:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+
   backend:
     build:
       context: ..
       dockerfile: docker/Dockerfile.backend
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     env_file:
       - ../.env
     environment:
@@ -14,6 +25,7 @@ services:
     volumes:
       - ../vector_db:/app/vector_db
       - ../data:/app/data:ro
+      - staticfiles:/app/apps/backend/staticfiles
     restart: unless-stopped
     command:
       [
@@ -21,3 +33,6 @@ services:
         "-c",
         "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2 --timeout 600 --access-logfile - --error-logfile - --capture-output"
       ]
+
+volumes:
+  staticfiles:
