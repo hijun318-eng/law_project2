@@ -1,6 +1,7 @@
 import re
 from pathlib import Path
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
@@ -148,6 +149,12 @@ def validate_prompt_content(template_id: str, content: str) -> list[str]:
 @transaction.atomic
 def save_prompt_template(template_id: str, content: str, updated_by: str = "관리자") -> None:
     ensure_seed_prompts()
+    # 클라이언트가 "validate"를 건너뛰고 바로 "save"를 호출해도 필수 플레이스홀더
+    # 누락 등 검증 없이 저장되지 않도록 서버에서도 동일한 검증을 강제한다.
+    errors = validate_prompt_content(template_id, content)
+    if errors:
+        raise ValidationError("; ".join(errors))
+
     template = PromptTemplate.objects.select_for_update().get(key=template_id, is_active=True)
     new_version = template.current_version + 1
 

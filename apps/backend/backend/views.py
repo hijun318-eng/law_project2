@@ -119,6 +119,20 @@ def login_view(request):
             }
             return redirect("admin_console") if user.is_staff else redirect("landing")
 
+        # authenticate()는 비밀번호 불일치와 정지 계정(is_active=False)을 구분하지 않고
+        # 둘 다 None을 반환하므로, 비밀번호가 맞는 정지 계정인지 별도로 확인해 안내한다.
+        try:
+            inactive_user = User.objects.get(username=email, is_active=False)
+        except User.DoesNotExist:
+            inactive_user = None
+        if inactive_user and inactive_user.check_password(password):
+            return render(
+                request,
+                "labor/_login.html",
+                {"error": "정지된 계정입니다. 관리자에게 문의해주세요.", "email": email},
+                status=403,
+            )
+
         fail_count += 1
         cache.set(fail_key, fail_count, LOGIN_LOCKOUT_SECONDS)
         if fail_count >= LOGIN_FAIL_LIMIT:
