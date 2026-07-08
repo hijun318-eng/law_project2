@@ -22,7 +22,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           timeout: 10m
           command_timeout: 20m
-          script_stop: true
+          script_stop: false
           script: |
             set -e
             cd ~/law_project2
