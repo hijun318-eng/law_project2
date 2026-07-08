@@ -32,32 +32,6 @@ jobs:
             cat > .env <<'EOF'
             ${{ secrets.PROD_ENV }}
             EOF
-            python3 - <<'PY'
-            from pathlib import Path
-            import re
-
-            env_path = Path(".env")
-            cleaned = []
-            for line in env_path.read_text(encoding="utf-8", errors="replace").splitlines():
-                stripped = line.strip()
-                if not stripped:
-                    cleaned.append("")
-                    continue
-                if stripped.startswith("#"):
-                    cleaned.append(stripped)
-                    continue
-                if stripped.startswith("DRONE_SSH_PREV_COMMAND_EXIT_CODE="):
-                    continue
-                if "=" in line:
-                    key, value = line.split("=", 1)
-                    key = key.strip()
-                    if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", key):
-                        cleaned.append(f"{key}={value.lstrip()}")
-                        continue
-                cleaned.append(line)
-
-            env_path.write_text("\n".join(cleaned).rstrip() + "\n", encoding="utf-8")
-            PY
             docker compose --env-file .env -f docker/docker-compose.backend.aws.yml up -d --no-build --force-recreate
             docker compose -f docker/docker-compose.backend.aws.yml ps
             for i in $(seq 1 12); do
