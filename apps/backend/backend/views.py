@@ -1,11 +1,13 @@
 import json
 
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http import HttpResponseForbidden, JsonResponse, StreamingHttpResponse
 from django.shortcuts import redirect, render
+from django.views import View
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_POST
 
 from .services import calculator, dashboard, news
 from engine.supervisor.engine import SupervisorEngine
@@ -299,46 +301,51 @@ def admin_performance_data(request):
     return JsonResponse(data)
 
 
-@require_http_methods(["GET", "POST"])
-def admin_price_config(request):
-    if not request.user.is_authenticated or not request.user.is_staff:
+class PriceConfigView(UserPassesTestMixin, View):
+    """관리자 전용 토큰당 가격 설정 조회(GET)/등록·수정(POST) API.
+    GET/POST 분기 + 권한 체크가 뚜렷해 CBV(UserPassesTestMixin)로 표현하기 적절한 케이스."""
+
+    def test_func(self):
+        return self.request.user.is_authenticated and self.request.user.is_staff
+
+    def handle_no_permission(self):
         return JsonResponse({"error": "Unauthorized"}, status=403)
 
-    if request.method == "GET":
+    def get(self, request):
         configs = PriceConfig.objects.all().values(
             "id", "model_name", "prompt_token_price", "completion_token_price"
         )
         return JsonResponse(list(configs), safe=False)
 
-    # POST
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-    model_name = data.get("model_name", "").strip()
-    if not model_name:
-        return JsonResponse({"error": "model_name is required"}, status=400)
+        model_name = data.get("model_name", "").strip()
+        if not model_name:
+            return JsonResponse({"error": "model_name is required"}, status=400)
 
-    try:
-        prompt_price = float(data.get("prompt_token_price", 0))
-        completion_price = float(data.get("completion_token_price", 0))
-    except (TypeError, ValueError):
-        return JsonResponse({"error": "Prices must be numbers"}, status=400)
+        try:
+            prompt_price = float(data.get("prompt_token_price", 0))
+            completion_price = float(data.get("completion_token_price", 0))
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "Prices must be numbers"}, status=400)
 
-    if prompt_price < 0 or completion_price < 0:
-        return JsonResponse({"error": "Prices cannot be negative"}, status=400)
+        if prompt_price < 0 or completion_price < 0:
+            return JsonResponse({"error": "Prices cannot be negative"}, status=400)
 
-    user_name = request.user.get_full_name() or request.user.username or "admin"
-    PriceConfig.objects.update_or_create(
-        model_name=model_name,
-        defaults={
-            "prompt_token_price": prompt_price,
-            "completion_token_price": completion_price,
-            "updated_by": user_name,
-        }
-    )
-    return JsonResponse({"ok": True})
+        user_name = request.user.get_full_name() or request.user.username or "admin"
+        PriceConfig.objects.update_or_create(
+            model_name=model_name,
+            defaults={
+                "prompt_token_price": prompt_price,
+                "completion_token_price": completion_price,
+                "updated_by": user_name,
+            }
+        )
+        return JsonResponse({"ok": True})
 
 
 @require_POST
@@ -516,23 +523,28 @@ def calculate_api(request):
     return JsonResponse({"message": message, "result": result.to_dict() if result else None})
 
 
-def history_detail_api(request, history_id):
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "로그인이 필요합니다."}, status=401)
-    try:
-        chat = ChatHistory.objects.get(pk=history_id, user=request.user)
-    except ChatHistory.DoesNotExist:
-        return JsonResponse({"error": "not found"}, status=404)
+class HistoryDetailView(LoginRequiredMixin, View):
+    """로그인한 사용자 본인의 상담 이력 상세 조회 API (IDOR 방지를 위해 user로 스코프 제한).
+    인증 체크 + 단건 조회라는 전형적인 패턴이라 LoginRequiredMixin 기반 CBV로 표현."""
 
-    return JsonResponse({
-        "id": chat.id,
-        "question": chat.question,
-        "answer": chat.answer,
-        "mode": chat.mode,
-        "feedback": chat.feedback,
-        "sources": chat.sources,
-        "created_at": chat.created_at.isoformat(),
-    })
+    def handle_no_permission(self):
+        return JsonResponse({"error": "로그인이 필요합니다."}, status=401)
+
+    def get(self, request, history_id):
+        try:
+            chat = ChatHistory.objects.get(pk=history_id, user=request.user)
+        except ChatHistory.DoesNotExist:
+            return JsonResponse({"error": "not found"}, status=404)
+
+        return JsonResponse({
+            "id": chat.id,
+            "question": chat.question,
+            "answer": chat.answer,
+            "mode": chat.mode,
+            "feedback": chat.feedback,
+            "sources": chat.sources,
+            "created_at": chat.created_at.isoformat(),
+        })
 
 
 def news_api(request):
