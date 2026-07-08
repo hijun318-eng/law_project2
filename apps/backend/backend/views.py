@@ -502,13 +502,30 @@ def feedback_api(request):
     return JsonResponse({"ok": True, "feedback": chat.feedback})
 
 
+def _sanitize_conversation_history(raw) -> list | None:
+    """요청으로 들어온 history를 [{"role": "user"/"assistant", "content": str}, ...] 형태로만 정제.
+    형식이 어긋난 항목은 조용히 걸러내 ReAct 에이전트 쪽 코드가 신뢰할 수 있는 입력만 받게 한다."""
+    if not isinstance(raw, list):
+        return None
+    cleaned = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        role = item.get("role")
+        content = item.get("content")
+        if role in ("user", "assistant") and isinstance(content, str) and content.strip():
+            cleaned.append({"role": role, "content": content})
+    return cleaned or None
+
+
 @require_POST
 def calculate_api(request):
     payload = _json_payload(request)
     mode = payload.get("mode", "form")
     if mode == "chat":
         try:
-            message, result = calculator.calculate_natural(payload.get("text", ""))
+            history = _sanitize_conversation_history(payload.get("history"))
+            message, result = calculator.calculate_natural(payload.get("text", ""), history)
         except Exception as e:
             logger.exception("calculate_api 자연어 계산 실패")
             return JsonResponse({"message": llm_error_message(e), "result": None})
