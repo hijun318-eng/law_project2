@@ -1,4 +1,4 @@
-# 노동OK — 프로젝트 구현 평가기준 충족현황 보고서
+# 노동OK — 개발된 LLM 연동 웹 어플리케이션
 
 - 작성일: 2026-07-08
 - 대상: 노동OK (GraphRAG 기반 노동법 상담 AI + Django 웹 애플리케이션)
@@ -11,9 +11,9 @@
 | 1. 프론트엔드 구현 완성도 | HTML5/CSS3 반응형 마크업, ES6+ 문법, DOM/이벤트 처리 | ✅ 충족 |
 | 2. 비동기 LLM 연동 구현 | Async/Await·Fetch API 외부 API 호출, 예외·로딩 처리 | ✅ 충족 |
 | 3. Django 백엔드 구현 | MVT/ORM/FBV·CBV/폼 검증/인증·권한 처리 | ⚠️ 부분 충족 |
-| 4. 배포·운영 구현 | AWS(EC2·RDS·S3)와 Docker 기반 배포 | ⚠️ 부분 충족 |
+| 4. 배포·운영 구현 | AWS(EC2·RDS·S3)와 Docker 기반 배포 | ⚠️ 부분 충족 (RDS 연동 예정) |
 
-> 3, 4번 항목의 미비점은 각 섹션 하단 "미구현/차이" 박스와 문서 맨 끝 [보완 제언](#보완-제언)에 정리했습니다.
+> 3, 4번 항목의 미비점은 각 섹션 하단 "미구현/차이" 박스와 문서 맨 끝 [보완 제언](#보완-제언)에 정리했습니다. RDS·S3는 도입 예정이며, 현재 진행 상황은 4번 섹션과 [보완 제언](#보완-제언)에 정리했습니다.
 
 ---
 
@@ -116,7 +116,7 @@
 
 ## 4. 배포·운영 구현
 
-**결론: Docker + Nginx + EC2 2대 분리 배포 + CI는 구성됨. RDS·S3는 미사용 (아래 "미구현" 참고)**
+**결론: Docker + Nginx + EC2 2대 분리 배포 + CI는 구성됨. RDS는 연동 코드가 구현되어 있고 전환 예정, S3는 아직 미착수 (아래 "미구현" 참고)**
 
 ### Docker / Nginx
 
@@ -146,6 +146,23 @@ nginx 도입으로 `backend` 컨테이너는 `expose: 8000`(내부망 전용)만
 - `apps/ranker/ranker/views.py:28-32` (토큰 검증)
 - `apps/backend/engine/nodes/retrieval.py:16-24` (토큰 첨부 호출)
 
+### AWS RDS(PostgreSQL) 전환
+
+DB 계층은 `DATABASE_URL` 환경변수 유무로 SQLite/RDS를 전환하도록 이미 코드에 구현되어 있고, 실제 전환은 RDS 인스턴스 생성 후 EC2 `.env`에 값을 채우면 완료됨:
+
+| 구현 내용 | 근거 |
+|---|---|
+| `DATABASE_URL` 기반 DB 분기 (`dj_database_url.parse`) | `backend/settings.py:91-107` |
+| PostgreSQL 드라이버 | `requirements.txt:18` (`psycopg[binary]`) |
+| 커넥션 풀링(`DB_CONN_MAX_AGE`), SSL 강제(`DB_SSL_REQUIRE`) | `backend/settings.py:97-98` |
+| RDS 생성값·전환 절차·백업/복원·롤백 가이드 | `doc/rds-postgres-migration.md` |
+
+> `DATABASE_URL`이 비어 있으면 기존처럼 SQLite로 동작 — 로컬 개발 환경은 그대로 두고 배포 환경만 RDS로 전환 가능.
+
+### AWS S3 스토리지 (예정)
+
+정적/미디어 파일의 S3 전환은 아직 착수 전이며, 현재는 WhiteNoise + nginx `/static/` alias 조합으로 정적파일을 서빙 중. 도입 시 `django-storages`+`boto3` 추가, `STORAGES`/`AWS_STORAGE_BUCKET_NAME` 등 설정, 버킷 정책·IAM 권한 구성이 필요.
+
 ### 환경변수 / CI
 
 | 구현 내용 | 근거 |
@@ -163,12 +180,12 @@ nginx 도입으로 `backend` 컨테이너는 `expose: 8000`(내부망 전용)만
 |---|---|
 | CBV | 미사용 — 전체 FBV로만 구현 |
 | Django Form/ModelForm | 미사용 — 뷰 함수 내 수동 검증(`if not name or not email...`)으로 대체 |
-| RDS | 미사용 — `settings.py:91-96` DB는 SQLite |
-| S3 | 미사용 — 정적파일은 WhiteNoise + nginx `/static/` alias 조합 |
+| RDS | 연동 코드 구현 완료, 실사용은 전환 예정 — `settings.py:91-107`에서 `DATABASE_URL` 유무로 SQLite/PostgreSQL(RDS) 분기, 현재는 env 미설정으로 SQLite 사용 중 |
+| S3 | 미착수 — 정적파일은 WhiteNoise + nginx `/static/` alias 조합, `django-storages`/`boto3` 미도입 |
 
 ## 보완 제언
 
 1. **CBV 추가** — 관리자 대시보드류 뷰 1~2개를 `View`/`TemplateView`로 리팩터링
 2. **Django Form 도입** — `register_view()`의 수동 검증을 `RegisterForm(forms.Form)` + `clean_*`로 전환
-3. **RDS 전환** — SQLite → PostgreSQL(RDS)
-4. **S3 스토리지** — `django-storages`+`boto3`로 정적/미디어 파일 전환
+3. **RDS 전환** — 코드(`DATABASE_URL` 분기)는 준비됨. `doc/rds-postgres-migration.md` 절차대로 RDS 인스턴스 생성 후 EC2 `.env`에 `DATABASE_URL` 설정만 하면 전환 완료
+4. **S3 스토리지** — `django-storages`+`boto3` 추가, `STORAGES` 설정 및 버킷/IAM 구성으로 정적·미디어 파일 전환 (신규 착수 필요)
