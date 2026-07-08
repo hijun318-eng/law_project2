@@ -11,6 +11,9 @@ export const postJson = (url, payload) => fetch(url, {
     body: JSON.stringify(payload),
 }).then((response) => response.json());
 
+// LLM-006: AI가 생성하는 모든 응답(상담/계산/뉴스)에 공통으로 붙이는 법률 자문 고지 문구
+export const LEGAL_DISCLAIMER_HTML = `<p class="answer-disclaimer">※ 이 답변은 AI가 제공하는 참고 정보이며 법적 효력이 있는 자문이 아닙니다. 구체적인 사안은 노무사·변호사 등 전문가와 상담하세요.</p>`;
+
 export function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, (char) => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",

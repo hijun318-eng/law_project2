@@ -1,4 +1,4 @@
-import { postJson, appendMessage, escapeHtml, markdownToHtml, csrf } from "./utils.js?v=2";
+import { postJson, appendMessage, escapeHtml, markdownToHtml, csrf, LEGAL_DISCLAIMER_HTML } from "./utils.js?v=3";
 
 function renderLawSources(sources) {
     if (!sources || sources.length === 0) {
@@ -59,8 +59,6 @@ function renderAnswerWithLegalBasis(markdown) {
         </div>
     </div>`;
 }
-
-const ANSWER_DISCLAIMER = `<p class="answer-disclaimer">※ 이 답변은 AI가 제공하는 참고 정보이며 법적 효력이 있는 자문이 아닙니다. 구체적인 사안은 노무사·변호사 등 전문가와 상담하세요.</p>`;
 
 function renderProgress(label) {
     return `<div class="progress-indicator"><span class="spinner" aria-hidden="true"></span><span class="progress-label">${escapeHtml(label)}</span><span class="progress-timer">0초</span></div>`;
@@ -162,7 +160,7 @@ export function initAdvice() {
                 stopTimer();
                 progressBubble.remove();
                 // 답변에 "## 법적 근거" 섹션이 있으면 카드 전환 UI로, 없으면 그대로 렌더링
-                appendMessage(messages, "ai", renderAnswerWithLegalBasis(data.answer) + ANSWER_DISCLAIMER, true, true, data.message_id);
+                appendMessage(messages, "ai", renderAnswerWithLegalBasis(data.answer) + LEGAL_DISCLAIMER_HTML, true, true, data.message_id);
             },
             onError: () => {
                 stopTimer();

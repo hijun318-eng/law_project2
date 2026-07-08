@@ -1,4 +1,4 @@
-import { csrf } from "./utils.js?v=2";
+import { csrf } from "./utils.js?v=3";
 
 const PERIOD_LABELS = {
     day: "최근 30일",

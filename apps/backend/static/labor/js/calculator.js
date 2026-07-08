@@ -1,4 +1,4 @@
-import { postJson, appendMessage, escapeHtml } from "./utils.js";
+import { postJson, appendMessage, escapeHtml, markdownToHtml, LEGAL_DISCLAIMER_HTML } from "./utils.js?v=3";
 
 const FIELD_LABELS = { salary: "월 기본급", months: "근무 기간", hours: "주 소정근로시간" };
 
@@ -55,7 +55,7 @@ function updateCalcFormValidity() {
 function renderResult(result) {
     if (!result) return "";
     const lines = result.lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("");
-    return `<div class="result-box ${result.tone}"><span>${escapeHtml(result.label)}</span><strong>${escapeHtml(result.amount_display)}</strong>${lines}${result.note ? `<p>${escapeHtml(result.note)}</p>` : ""}<p>※ 이 계산은 참고용이며 실제 금액과 다를 수 있습니다</p></div>`;
+    return `<div class="result-box ${result.tone}"><span>${escapeHtml(result.label)}</span><strong>${escapeHtml(result.amount_display)}</strong>${lines}${result.note ? `<p>${escapeHtml(result.note)}</p>` : ""}<p>※ 이 계산은 참고용이며 실제 금액과 다를 수 있습니다</p>${LEGAL_DISCLAIMER_HTML}</div>`;
 }
 
 export function initCalculator() {
@@ -122,7 +122,7 @@ export function initCalculator() {
             if (data.result) {
                 appendMessage(messages, "ai", renderResult(data.result), false, true);
             } else {
-                appendMessage(messages, "ai", data.message, false, false);
+                appendMessage(messages, "ai", markdownToHtml(data.message) + LEGAL_DISCLAIMER_HTML, false, true);
             }
             naturalCalcHistory.push({ role: "user", content: text });
             naturalCalcHistory.push({ role: "assistant", content: data.message });
