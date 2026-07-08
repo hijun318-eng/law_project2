@@ -23,6 +23,7 @@ services:
       - DEBUG=False
       - RANKER_TIMEOUT_SECONDS=30
     volumes:
+      - ../apps/backend:/app/apps/backend
       - ../vector_db:/app/vector_db
       - ../data:/app/data:ro
       - staticfiles:/app/apps/backend/staticfiles
@@ -31,7 +32,7 @@ services:
       [
         "sh",
         "-c",
-        "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2 --timeout 600 --access-logfile - --error-logfile - --capture-output"
+        "python -m pip install --no-cache-dir dj-database-url 'psycopg[binary]' && python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2 --timeout 600 --access-logfile - --error-logfile - --capture-output"
       ]
 
 volumes:
