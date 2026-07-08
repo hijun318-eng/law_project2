@@ -15,3 +15,5 @@ beautifulsoup4==4.15.0
 Pillow==12.2.0
 gunicorn
 whitenoise
+dj-database-url
+psycopg[binary]
