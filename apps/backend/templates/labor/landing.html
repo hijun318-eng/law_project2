@@ -20,6 +20,7 @@
     <nav class="landing-actions">
         {% if user %}
             <span class="ghost-link">{{ user.name }}님</span>
+            <a class="ghost-link" href="{% url 'logout' %}">로그아웃</a>
             <a class="primary-link" href="{% url 'user_app' %}?page=home">AI 상담 시작</a>
         {% else %}
             <a class="ghost-link" href="{% url 'login' %}">로그인</a>
