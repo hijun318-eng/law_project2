@@ -1,4 +1,4 @@
-import { escapeHtml, markdownToHtml } from "./utils.js?v=2";
+import { escapeHtml, markdownToHtml } from "./utils.js?v=3";
 
 function renderNews(item) {
     return `<article class="news-card"><a href="${escapeHtml(item.link)}" target="_blank" rel="noopener"><header><time>${escapeHtml(item.date)}</time></header><h2>${escapeHtml(item.title)}</h2><p>${escapeHtml(item.summary)}</p></a></article>`;

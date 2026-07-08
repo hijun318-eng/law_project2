@@ -1,8 +1,8 @@
 import { initSidebar } from "./sidebar.js";
-import { initAdvice } from "./advice.js?v=11";
-import { initCalculator } from "./calculator.js?v=3";
-import { initNews } from "./news.js?v=4";
-import { markdownToHtml } from "./utils.js?v=2";
+import { initAdvice } from "./advice.js?v=12";
+import { initCalculator } from "./calculator.js?v=4";
+import { initNews } from "./news.js?v=5";
+import { markdownToHtml } from "./utils.js?v=3";
 
 console.log("[app-main] module started");
 initSidebar();
