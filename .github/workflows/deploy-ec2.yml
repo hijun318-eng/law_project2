@@ -28,5 +28,8 @@ jobs:
             git fetch origin deploy
             git checkout deploy
             git pull --ff-only origin deploy
+            cat > .env <<'EOF'
+            ${{ secrets.PROD_ENV }}
+            EOF
             docker compose --env-file .env -f docker/docker-compose.backend.aws.yml up -d --build
             docker compose -f docker/docker-compose.backend.aws.yml ps
