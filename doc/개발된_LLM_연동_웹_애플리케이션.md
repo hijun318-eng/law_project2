@@ -86,9 +86,9 @@
 | Model | `chat/models.py:5-73` (`ChatHistory`, `PromptTemplate` 등), `monitoring/models.py:4-43` |
 | View | `backend/views.py` 전체 |
 | Template | `templates/labor/*.html` |
-| 화면-URL-View-Template 매핑 설계서 | `doc/screen_design.md` (SC-1.1~SC-4.5, 실제 구현 기준) |
+| 화면-URL-View-Template 매핑 설계서 | `doc/화면_설계서.md` (SC-1.1~SC-4.5, 실제 구현 기준) |
 
-> **설계 문서와 실제 구현의 차이**: `doc/Django MVT 설계.md`(초기안)는 `home`/`accounts`/`chat`/`calculator`/`news`/`dashboard`로 앱을 분리하는 구조를 제안했지만, 실제로는 `apps/backend/backend` 단일 앱에 `/app/?page=...`, `/admin-console/?tab=...` 같은 쿼리 파라미터 라우팅으로 통합됨. 최신 실제 구조는 `doc/screen_design.md` 기준.
+> **설계 문서와 실제 구현의 차이**: `doc/manuals/Django_MVT.md`(초기안)는 `home`/`accounts`/`chat`/`calculator`/`news`/`dashboard`로 앱을 분리하는 구조를 제안했지만, 실제로는 `apps/backend/backend` 단일 앱에 `/app/?page=...`, `/admin-console/?tab=...` 같은 쿼리 파라미터 라우팅으로 통합됨. 최신 실제 구조는 `doc/화면_설계서.md` 기준.
 
 ### ORM
 
@@ -127,7 +127,7 @@
 | 로컬 개발용 compose (backend+ranker) | `docker/docker-compose.yml` |
 | AWS 배포용 compose (nginx+backend) | `docker/docker-compose.backend.aws.yml` |
 | GPU 랭커 전용 compose | `docker/docker-compose.ranker-gpu.aws.yml` |
-| nginx 리버스 프록시 설정 | `docker/nginx.conf`, `doc/nginx-backend-deploy.md` |
+| nginx 리버스 프록시 설정 | `docker/nginx.conf`, `doc/manuals/nginx-backend-deploy.md` |
 
 nginx 도입으로 `backend` 컨테이너는 `expose: 8000`(내부망 전용)만 사용하고, 외부에는 nginx의 80 포트만 노출됨 — 공격 표면 축소. 호스트 Nginx/Apache와의 포트 충돌 대응 절차까지 문서화됨.
 
@@ -138,11 +138,11 @@ nginx 도입으로 `backend` 컨테이너는 `expose: 8000`(내부망 전용)만
 | Backend EC2 | `t3.large` (최소 `t3.medium`) | 웹 서빙, Django API, Chroma 검색, OpenAI 호출 | 22(내 IP), 80(nginx) |
 | Ranker GPU EC2 | `g4dn.2xlarge`/`g5.2xlarge` (최소 `g4dn.xlarge`) | 랭커 모델 서빙(`/rerank/`) | 22(내 IP), 8001(Backend만 허용) |
 
-두 서버는 VPC 내부 Private IP로 통신(`RANKER_URL=http://RANKER_PRIVATE_IP:8001/rerank/`). GPU 랭커는 Gunicorn worker를 1개로 고정해 모델이 worker마다 복제되어 VRAM이 초과되는 것을 방지(`docker/Dockerfile.ranker.gpu`). 배포 문서(`doc/aws-ec2-two-server-deploy.md`)에 10단계 배포 순서와 워밍업/OOM/디스크 부족 트러블슈팅 절차가 포함되어 있어 재현 가능한 형태로 정상 동작을 검증할 수 있음.
+두 서버는 VPC 내부 Private IP로 통신(`RANKER_URL=http://RANKER_PRIVATE_IP:8001/rerank/`). GPU 랭커는 Gunicorn worker를 1개로 고정해 모델이 worker마다 복제되어 VRAM이 초과되는 것을 방지(`docker/Dockerfile.ranker.gpu`). 배포 문서(`doc/manuals/aws-ec2-two-server-deploy.md`)에 10단계 배포 순서와 워밍업/OOM/디스크 부족 트러블슈팅 절차가 포함되어 있어 재현 가능한 형태로 정상 동작을 검증할 수 있음.
 
 ### GPU 비용 최적화: RunPod 이전
 
-상시 과금되는 GPU EC2 대신 사용량 기반 과금인 RunPod Pod로 랭커만 이전하는 경로도 마련됨(`doc/runpod-ranker-deploy.md`). AWS 내부망과 달리 퍼블릭 프록시로 노출되므로 `Authorization: Bearer <RANKER_API_KEY>` 인증을 추가 구현:
+상시 과금되는 GPU EC2 대신 사용량 기반 과금인 RunPod Pod로 랭커만 이전하는 경로도 마련됨(`doc/manuals/runpod-ranker-deploy.md`). AWS 내부망과 달리 퍼블릭 프록시로 노출되므로 `Authorization: Bearer <RANKER_API_KEY>` 인증을 추가 구현:
 - `apps/ranker/ranker/views.py:28-32` (토큰 검증)
 - `apps/backend/engine/nodes/retrieval.py:16-24` (토큰 첨부 호출)
 
@@ -155,7 +155,7 @@ DB 계층은 `DATABASE_URL` 환경변수 유무로 SQLite/RDS를 전환하도록
 | `DATABASE_URL` 기반 DB 분기 (`dj_database_url.parse`) | `backend/settings.py:91-107` |
 | PostgreSQL 드라이버 | `requirements.txt:18` (`psycopg[binary]`) |
 | 커넥션 풀링(`DB_CONN_MAX_AGE`), SSL 강제(`DB_SSL_REQUIRE`) | `backend/settings.py:97-98` |
-| RDS 생성값·전환 절차·백업/복원·롤백 가이드 | `doc/rds-postgres-migration.md` |
+| RDS 생성값·전환 절차·백업/복원·롤백 가이드 | `doc/manuals/rds-postgres-migration.md` |
 
 > `DATABASE_URL`이 비어 있으면 기존처럼 SQLite로 동작 — 로컬 개발 환경은 SQLite 그대로 두고, 배포 환경(EC2)만 RDS를 사용하도록 분리 적용됨.
 
@@ -168,7 +168,7 @@ DB 계층은 `DATABASE_URL` 환경변수 유무로 SQLite/RDS를 전환하도록
 | S3 URI를 시크릿으로 주입 (`VECTOR_DB_S3_URI`), 미설정 시 스킵 | 위 워크플로 조건문 (`if [ -n "${{ secrets.VECTOR_DB_S3_URI }}" ]`) |
 | EC2에 AWS CLI 미설치 시 자동 설치 후 `aws s3 sync ... --delete` 실행 | 위 워크플로 |
 
-> Chroma `vector_db`는 대용량 임베딩 인덱스라 Git/이미지에 포함하지 않고, 배포 때마다 S3에서 최신본을 내려받는 방식으로 운영. `doc/rds-postgres-migration.md`에서도 "Chroma vector_db는 RDS 대상이 아니며 별도 벡터 저장소/백업으로 다룬다"고 명시한 부분이 이 S3 동기화로 실현됨.
+> Chroma `vector_db`는 대용량 임베딩 인덱스라 Git/이미지에 포함하지 않고, 배포 때마다 S3에서 최신본을 내려받는 방식으로 운영. `doc/manuals/rds-postgres-migration.md`에서도 "Chroma vector_db는 RDS 대상이 아니며 별도 벡터 저장소/백업으로 다룬다"고 명시한 부분이 이 S3 동기화로 실현됨.
 >
 > 원래 `deploy` 브랜치(커밋 `03870d9` "Sync vector DB from S3 during deploy")에만 있던 구현을 `main`의 `deploy-ec2.yml`에도 반영함.
 
@@ -196,5 +196,5 @@ DB 계층은 `DATABASE_URL` 환경변수 유무로 SQLite/RDS를 전환하도록
 
 1. **CBV 추가** — 관리자 대시보드류 뷰 1~2개를 `View`/`TemplateView`로 리팩터링
 2. **Django Form 도입** — `register_view()`의 수동 검증을 `RegisterForm(forms.Form)` + `clean_*`로 전환
-3. **RDS 적용 완료** — 코드(`DATABASE_URL` 분기) 및 배포 환경 적용까지 완료. 절차/롤백 가이드는 `doc/rds-postgres-migration.md` 참고
+3. **RDS 적용 완료** — 코드(`DATABASE_URL` 분기) 및 배포 환경 적용까지 완료. 절차/롤백 가이드는 `doc/manuals/rds-postgres-migration.md` 참고
 4. **정적/미디어 파일 S3화 (선택, 미도입)** — 필요 시 `django-storages`+`boto3` 추가, `STORAGES` 설정 및 버킷/IAM 구성으로 확장 가능
