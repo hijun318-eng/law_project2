@@ -135,13 +135,23 @@ resource "runpod_endpoint" "ranker" {
   idle_timeout = var.runpod_serverless_idle_timeout
   gpu_count    = 1
 
+  # flashboot/gpu_type_ids를 안 넣으면 RunPod API가 자체 기본값을 채워 넣는데(flashboot=true,
+  # gpu_type_ids=계정에서 쓸 수 있는 전체 GPU 목록), 이 provider는 이 드리프트를 매 plan마다
+  # "1 to change"로 잡아서 불필요한 Update 호출을 유발하고, 그 Update가 다시 아래
+  # network_volume_ids류의 "provider produced inconsistent result" 버그를 반복 트리거함.
+  # 그래서 template과 동일하게 여기서도 명시적으로 선언해 드리프트를 없앰.
+  flashboot    = true
+  gpu_type_ids = var.runpod_gpu_type_ids
+
   data_center_ids = (
     var.runpod_use_network_volume
     ? [var.runpod_network_volume_data_center_id]
     : (length(var.runpod_data_center_ids) > 0 ? var.runpod_data_center_ids : null)
   )
 
-  network_volume_id = var.runpod_use_network_volume ? runpod_network_volume.ranker_serverless_cache[0].id : null
+  # use_network_volume=false일 때 API가 network_volume_id를 null이 아니라 빈 문자열("")로
+  # 돌려줘서, null을 넣으면 "provider produced inconsistent result"(null -> "") 에러가 남
+  network_volume_id = var.runpod_use_network_volume ? runpod_network_volume.ranker_serverless_cache[0].id : ""
 
   # network_volume_ids(복수, computed 전용 필드)는 일부러 안 건드림 — 여기에 값을
   # 직접 넣으면 GraphQL API가 문자열이 아니라 객체를 기대하는 스키마 불일치로 500 에러가
@@ -149,7 +159,12 @@ resource "runpod_endpoint" "ranker" {
   # 사후에 network_volume_ids를 자동으로 채워 돌려주면서 생기는 "provider produced
   # inconsistent result" 에러는 provider(v1.0.8)의 알려진 버그 — 리소스 자체는 실제로
   # 정상 생성되므로 apply 실패 후 `terraform untaint runpod_endpoint.ranker[0]`로 넘어감.
+  #
+  # gpu_type_ids도 RunPod API가 저장 시 순서를 자기 마음대로 바꿔서 돌려줘서(집합은 같은데
+  # 순서만 다름), 매 plan마다 "순서 원복" Update가 발생하고 그 Update가 다시 위와 같은
+  # "provider produced inconsistent result" 버그를 반복 트리거함 — 순서는 기능에
+  # 영향 없으므로 아예 무시함.
   lifecycle {
-    ignore_changes = [network_volume_ids]
+    ignore_changes = [network_volume_ids, gpu_type_ids]
   }
 }

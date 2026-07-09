@@ -11,6 +11,17 @@ resource "aws_security_group" "backend" {
     cidr_blocks = [var.ssh_allowed_cidr]
   }
 
+  # GitHub Actions(deploy-ec2-terraform.yml)가 SSH로 접속해서 배포하는데, GitHub Actions
+  # 러너는 매번 다른 동적 IP를 쓰므로 ssh_allowed_cidr(관리자 고정 IP)만으로는 막힘.
+  # 인증은 여전히 SSH 키로 이뤄지므로, IP 대역을 넓히는 대신 키 소유 여부로 방어함.
+  ingress {
+    description = "SSH from CI/CD (GitHub Actions runners have dynamic IPs)"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.ci_ssh_allowed_cidr]
+  }
+
   # docker-compose.backend.terraform.yml의 nginx 컨테이너가 80을 퍼블리시하고,
   # backend 컨테이너는 expose로만 내부 네트워크에 노출됨 (호스트 8000 리스닝 없음)
   ingress {

@@ -1,5 +1,6 @@
 Django>=6.0,<6.1
 sentence-transformers
+huggingface_hub[hf_xet]
 python-decouple
 gunicorn
 runpod
