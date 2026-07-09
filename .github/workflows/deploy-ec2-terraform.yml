@@ -1,0 +1,64 @@
+name: Deploy EC2 (Terraform)
+
+# .github/workflows/deploy-ec2.yml과 별개 워크플로우. 그 파일은 `deploy` 브랜치 push로
+# 기존 운영 서버(52.79.204.190, docker-compose.backend.aws.yml + nginx.conf 하드코딩)를
+# 대상으로 하고, 이 워크플로우는 `deploy-terraform` 브랜치 push로 terraform/으로 새로
+# 만든 서버(docker-compose.backend.terraform.yml + nginx.terraform.conf, ALLOWED_HOSTS
+# 하드코딩 없음)를 대상으로 함. 브랜치와 시크릿(TF_ 접두사)을 모두 분리해서, 한쪽에
+# push해도 다른 쪽 서버는 전혀 영향받지 않고 완전히 독립적으로 배포됨.
+
+on:
+  push:
+    branches:
+      - deploy-terraform
+  workflow_dispatch:
+
+concurrency:
+  group: ec2-deploy-terraform
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy deploy-terraform branch to Terraform-managed EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.TF_EC2_HOST }}
+          username: ${{ secrets.TF_EC2_USER }}
+          key: ${{ secrets.TF_EC2_SSH_KEY }}
+          timeout: 10m
+          command_timeout: 20m
+          script_stop: false
+          script: |
+            set -e
+            cd ~/law_project2
+            git fetch origin deploy-terraform
+            git checkout deploy-terraform
+            git pull --ff-only origin deploy-terraform
+            cat > .env <<'EOF'
+            ${{ secrets.TF_PROD_ENV }}
+            EOF
+            if [ -n "${{ secrets.TF_VECTOR_DB_S3_URI }}" ]; then
+              if ! command -v aws >/dev/null 2>&1; then
+                sudo apt-get update
+                sudo apt-get install -y curl unzip
+                cd /tmp
+                curl -fsSLo awscliv2.zip https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+                unzip -q -o awscliv2.zip
+                sudo ./aws/install --update
+                cd ~/law_project2
+              fi
+              mkdir -p vector_db
+              aws s3 sync "${{ secrets.TF_VECTOR_DB_S3_URI }}" vector_db --delete
+            fi
+            docker compose --env-file .env -f docker/docker-compose.backend.terraform.yml up -d --no-build --force-recreate
+            docker compose -f docker/docker-compose.backend.terraform.yml ps
+            for i in $(seq 1 12); do
+              if curl -fsS -o /dev/null -H "Host: ${{ secrets.TF_EC2_HOST }}" http://localhost/; then
+                exit 0
+              fi
+              sleep 5
+            done
+            docker compose -f docker/docker-compose.backend.terraform.yml logs --tail=100 backend
+            exit 1

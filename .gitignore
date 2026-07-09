@@ -1,5 +1,8 @@
 law_test
 .env
+.env.local
+.env.*.local
+.env.terraform
 final_reason copy.ipynb
 temp
 __pycache__

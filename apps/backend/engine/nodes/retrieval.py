@@ -9,22 +9,38 @@ logger = logging.getLogger(__name__)
 def _call_ranker(query: str, documents: list[str], timeout: int | None = None) -> list[float]:
     """랭커 마이크로서비스를 HTTP로 호출. 실패 시 균등 점수 fallback."""
     api_key = ""
+    ranker_backend = "custom"
+    ranker_model = "Dongjin-kr/ko-reranker"
     try:
         from django.conf import settings
         ranker_url = settings.RANKER_URL
         timeout = timeout or getattr(settings, "RANKER_TIMEOUT_SECONDS", 30)
         api_key = getattr(settings, "RANKER_API_KEY", "")
+        ranker_backend = getattr(settings, "RANKER_BACKEND", "custom")
+        ranker_model = getattr(settings, "RANKER_MODEL", ranker_model)
     except (ImportError, AttributeError):
         ranker_url = 'http://localhost:8001/rerank/'
         timeout = timeout or 30
 
     # 인증은 자체 ranker/RunPod 공통으로 Authorization: Bearer 사용.
-    # RunPod Serverless(runsync)만 {"input": {...}} 요청 포맷과 {"output": {...}} 응답 포맷이 다르다.
+    # RunPod Serverless(runsync)는 {"input": {...}} 요청 / {"output": {...}} 응답으로 감싸지는데,
+    # 그 안의 실제 스키마는 어떤 워커가 떠 있느냐에 따라 다르다 (RANKER_BACKEND로 구분):
+    #   custom          - apps/ranker/handler.py: {"query","documents"} -> {"results":[{"index","score"}]}
+    #   runpod_infinity - RunPod 공식 worker-infinity-embedding: {"model","query","docs"} -> {"scores":[...]}
     is_runpod_serverless = "api.runpod.ai" in ranker_url
     headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
-    payload = {'query': query, 'documents': documents}
-    if is_runpod_serverless:
-        payload = {'input': payload}
+
+    if is_runpod_serverless and ranker_backend == "runpod_infinity":
+        payload = {'input': {
+            'model': ranker_model,
+            'query': query,
+            'docs': documents,
+            'return_docs': False,
+        }}
+    else:
+        payload = {'query': query, 'documents': documents}
+        if is_runpod_serverless:
+            payload = {'input': payload}
 
     try:
         resp = requests.post(
@@ -35,7 +51,10 @@ def _call_ranker(query: str, documents: list[str], timeout: int | None = None) -
         )
         resp.raise_for_status()
         data = resp.json()
-        if is_runpod_serverless:
+        if is_runpod_serverless and ranker_backend == "runpod_infinity":
+            # 응답 형식: {"output": {"scores": [0.95, 0.23, ...]}}
+            scores = (data.get('output') or {}).get('scores', [])
+        elif is_runpod_serverless:
             # 응답 형식: {"output": {"results": [{"index":0, "score":..., "normalized_score":...}, ...]}}
             results = (data.get('output') or {}).get('results', [])
             by_index = {r.get('index'): r.get('score', 0.0) for r in results}
