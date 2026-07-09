@@ -1,4 +1,4 @@
-import { postJson, appendMessage, escapeHtml, markdownToHtml, csrf, LEGAL_DISCLAIMER_HTML } from "./utils.js?v=3";
+import { postJson, appendMessage, escapeHtml, markdownToHtml, LEGAL_DISCLAIMER_HTML, renderProgress, formatProgress, streamSSE } from "./utils.js?v=4";
 
 function renderLawSources(sources) {
     if (!sources || sources.length === 0) {
@@ -60,49 +60,6 @@ function renderAnswerWithLegalBasis(markdown) {
     </div>`;
 }
 
-function renderProgress(label) {
-    return `<div class="progress-indicator"><span class="spinner" aria-hidden="true"></span><span class="progress-label">${escapeHtml(label)}</span><span class="progress-timer">0초</span></div>`;
-}
-
-// 노드 시작/종료 이벤트를 사람이 읽을 문장으로 변환.
-// 시작: "🔍 판례 직접 검색 중..." / 종료: "🔍 판례 직접 검색 완료 (1.2초)" (+ 있으면 세부 사유)
-function formatProgress(data) {
-    const elapsedText = data.elapsed != null ? ` (${data.elapsed}초)` : "";
-    const base = data.phase === "start" ? `${data.label} 중...` : `${data.label} 완료${elapsedText}`;
-    return data.log ? `${base} · ${data.log}` : base;
-}
-
-// advice_api는 LangGraph 노드가 진행될 때마다 SSE(text/event-stream)로
-// {"type": "progress", ...} 이벤트를 보내고, 마지막에 {"type": "done", ...}로 최종 답변을 보낸다.
-// onProgress(label)과 onDone(data)을 호출하며 스트림을 끝까지 읽는다.
-function streamAdvice(url, question, { onProgress, onDone, onError }) {
-    fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
-        body: JSON.stringify({ question }),
-    }).then((response) => {
-        if (!response.ok || !response.body) throw new Error(`요청 실패 (status ${response.status})`);
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        const pump = () => reader.read().then(({ done, value }) => {
-            if (value) buffer += decoder.decode(value, { stream: true });
-            const chunks = buffer.split("\n\n");
-            buffer = done ? "" : chunks.pop();
-            chunks.forEach((chunk) => {
-                const line = chunk.split("\n").find((l) => l.startsWith("data: "));
-                if (!line) return;
-                const data = JSON.parse(line.slice(6));
-                if (data.type === "progress") onProgress(data);
-                else if (data.type === "done") onDone(data);
-            });
-            if (!done) return pump();
-        });
-        return pump();
-    }).catch(onError);
-}
-
 export function initAdvice() {
     const adviceSection = document.querySelector("[data-advice-api]");
     if (!adviceSection) return;
@@ -152,7 +109,9 @@ export function initAdvice() {
         }, 1000);
         const stopTimer = () => clearInterval(timerId);
 
-        streamAdvice(adviceSection.dataset.adviceApi, question, {
+        streamSSE(adviceSection.dataset.adviceApi, {
+            method: "POST",
+            body: { question },
             onProgress: (data) => {
                 if (progressLabel) progressLabel.textContent = formatProgress(data);
             },
