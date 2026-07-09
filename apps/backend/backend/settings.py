@@ -40,6 +40,12 @@ RANKER_URL = config('RANKER_URL', default='http://localhost:8001/rerank/')
 RANKER_TIMEOUT_SECONDS = config('RANKER_TIMEOUT_SECONDS', default=30, cast=int)
 # RunPod 등 외부 네트워크로 노출된 ranker를 쓸 때 요청 인증용 공유 비밀키
 RANKER_API_KEY = config('RANKER_API_KEY', default='')
+# RunPod Serverless의 두 워커 종류 중 무엇을 호출하는지 (요청/응답 스키마가 다름):
+#   custom          - apps/ranker/handler.py 기반 커스텀 이미지 (기본값)
+#   runpod_infinity - RunPod 공식 worker-infinity-embedding (이미지 빌드 불필요)
+RANKER_BACKEND = config('RANKER_BACKEND', default='custom')
+# runpod_infinity 백엔드 호출 시 요청의 "model" 필드에 사용 (Endpoint의 MODEL_NAMES와 일치해야 함)
+RANKER_MODEL = config('RANKER_MODEL', default='Dongjin-kr/ko-reranker')
 
 
 # Application definition

@@ -1,0 +1,56 @@
+#!/bin/bash
+set -eux
+
+exec > >(tee /var/log/bootstrap.log) 2>&1
+
+APP_DIR="${app_dir}"
+
+if ! command -v docker >/dev/null 2>&1; then
+  curl -fsSL https://get.docker.com | sh
+fi
+systemctl enable docker
+systemctl start docker
+usermod -aG docker ubuntu || true
+
+if ! command -v git >/dev/null 2>&1; then
+  apt-get update -y
+  apt-get install -y git
+fi
+
+if [ ! -d "$APP_DIR" ]; then
+  git clone --branch "${git_branch}" "${git_repo_url}" "$APP_DIR"
+fi
+chown -R ubuntu:ubuntu "$APP_DIR"
+
+# Ranker 연결 안내 (backend .env의 RANKER_URL/RANKER_API_KEY 설정 시 참고)
+cat > "$APP_DIR/RANKER_CONNECTION_INFO.txt" <<EOF
+${ranker_connection_note}
+EOF
+
+# 기존 운영 서버용 docker-compose.backend.aws.yml(52.79.204.190 하드코딩)이 아니라
+# Terraform으로 새로 만든 서버 전용인 docker-compose.backend.terraform.yml을 씀
+# (ALLOWED_HOSTS 등을 .env 값 그대로 쓰고, nginx도 HTTP 전용 nginx.terraform.conf 사용)
+cat > "$APP_DIR/deploy_backend.sh" <<'EOS'
+#!/bin/bash
+set -e
+cd "$(dirname "$0")"
+docker compose --env-file .env -f docker/docker-compose.backend.terraform.yml up -d --build
+EOS
+chmod +x "$APP_DIR/deploy_backend.sh"
+chown ubuntu:ubuntu "$APP_DIR/deploy_backend.sh" "$APP_DIR/RANKER_CONNECTION_INFO.txt"
+
+cat <<EOF
+========================================================
+Backend 인스턴스 부트스트랩 완료.
+Ranker 연결 정보: ${ranker_connection_note}
+남은 작업 (SSH 접속 후 수동 진행):
+  1. scp로 .env, vector_db/, data/ 를 $APP_DIR 에 업로드
+     (RANKER_URL을 위 연결 정보에 맞게 설정)
+  2. $APP_DIR/deploy_backend.sh 실행
+========================================================
+EOF
+
+# auto_deploy_backend=true일 때 null_resource.backend_app_deploy가 이 파일이 생길
+# 때까지 대기했다가 파일 업로드 + deploy_backend.sh 실행을 이어서 진행함
+touch "$APP_DIR/.bootstrap_complete"
+chown ubuntu:ubuntu "$APP_DIR/.bootstrap_complete"

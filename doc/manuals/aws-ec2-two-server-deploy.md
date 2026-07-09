@@ -48,8 +48,8 @@ CUDA PyTorch
 허용 포트:
 
 ```text
-22    SSH        내 IP만 허용
-8000  Backend    내 IP 또는 로드밸런서에서 접근 허용
+22  SSH    내 IP만 허용
+80  Nginx  내 IP 또는 로드밸런서에서 접근 허용 (nginx가 backend:8000으로 프록시, doc/nginx-backend-deploy.md 참고)
 ```
 
 ### Ranker GPU EC2 보안 그룹
@@ -100,10 +100,10 @@ docker compose --env-file .env -f docker/docker-compose.backend.aws.yml up -d --
 docker compose --env-file .env -f docker/docker-compose.backend.aws.yml logs -f
 ```
 
-접속 확인:
+접속 확인 (nginx가 80으로 서빙하므로 포트 번호 없이 접속):
 
 ```text
-http://BACKEND_PUBLIC_IP:8000
+http://BACKEND_PUBLIC_IP
 ```
 
 ## 4. Ranker GPU EC2 준비
@@ -211,7 +211,7 @@ RERANKER_MAX_CHARS=1200
 7. Backend EC2에 `.env`, `vector_db`, `data` 배치
 8. Backend `.env`의 `RANKER_URL`을 Ranker private IP로 설정
 9. Backend compose 실행
-10. 브라우저에서 `http://BACKEND_PUBLIC_IP:8000` 접속 확인
+10. 브라우저에서 `http://BACKEND_PUBLIC_IP` 접속 확인 (nginx가 80 서빙, 포트 번호 불필요)
 
 ## 7. 빠른 장애 확인
 

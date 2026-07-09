@@ -1,0 +1,48 @@
+#!/bin/bash
+set -eux
+
+exec > >(tee /var/log/bootstrap.log) 2>&1
+
+APP_DIR="${app_dir}"
+
+# DLAMI에는 보통 Docker/NVIDIA driver/Container Toolkit이 이미 설치되어 있음.
+# 없는 경우에만 설치.
+if ! command -v docker >/dev/null 2>&1; then
+  curl -fsSL https://get.docker.com | sh
+fi
+systemctl enable docker
+systemctl start docker
+usermod -aG docker ubuntu || true
+
+# Hugging Face 모델 캐시 디렉토리 (NVMe 인스턴스 스토어)
+mkdir -p /opt/dlami/nvme/huggingface
+chown -R ubuntu:ubuntu /opt/dlami/nvme/huggingface
+
+if ! command -v git >/dev/null 2>&1; then
+  apt-get update -y
+  apt-get install -y git
+fi
+
+if [ ! -d "$APP_DIR" ]; then
+  git clone --branch "${git_branch}" "${git_repo_url}" "$APP_DIR"
+fi
+chown -R ubuntu:ubuntu "$APP_DIR"
+
+cat > "$APP_DIR/deploy_ranker.sh" <<'EOS'
+#!/bin/bash
+set -e
+cd "$(dirname "$0")"
+docker compose -f docker/docker-compose.ranker-gpu.aws.yml up -d --build
+EOS
+chmod +x "$APP_DIR/deploy_ranker.sh"
+chown ubuntu:ubuntu "$APP_DIR/deploy_ranker.sh"
+
+cat <<'EOF'
+========================================================
+Ranker 인스턴스 부트스트랩 완료.
+남은 작업 (SSH 접속 후 수동 진행):
+  1. scp로 .env 파일을 APP_DIR 루트에 업로드
+  2. nvidia-smi / docker run --gpus all ... 로 GPU 인식 확인
+  3. $APP_DIR/deploy_ranker.sh 실행
+========================================================
+EOF
