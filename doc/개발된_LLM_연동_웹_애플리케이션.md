@@ -1,6 +1,6 @@
 # 노동OK — 개발된 LLM 연동 웹 어플리케이션
 
-- 작성일: 2026-07-08
+- 작성일: 2026-07-08 (최종 수정: 2026-07-09 — CBV/Django Form 도입 반영, 프론트엔드 SSE 리팩터링 반영, 근거 라인 번호 갱신)
 - 대상: 노동OK (GraphRAG 기반 노동법 상담 AI + Django 웹 애플리케이션)
 - 목적: "개발된 LLM 연동 웹 애플리케이션" 평가기준 4개 항목의 구현 현황을 실제 코드 근거로 정리
 
@@ -10,10 +10,10 @@
 |---|---|:---:|
 | 1. 프론트엔드 구현 완성도 | HTML5/CSS3 반응형 마크업, ES6+ 문법, DOM/이벤트 처리 | ✅ 충족 |
 | 2. 비동기 LLM 연동 구현 | Async/Await·Fetch API 외부 API 호출, 예외·로딩 처리 | ✅ 충족 |
-| 3. Django 백엔드 구현 | MVT/ORM/FBV·CBV/폼 검증/인증·권한 처리 | ⚠️ 부분 충족 |
+| 3. Django 백엔드 구현 | MVT/ORM/FBV·CBV/폼 검증/인증·권한 처리 | ✅ 충족 |
 | 4. 배포·운영 구현 | AWS(EC2·RDS·S3)와 Docker 기반 배포 | ⚠️ 부분 충족 (RDS는 적용됨, 정적/미디어용 S3(django-storages)만 미도입 — vector_db 동기화용 S3는 구현됨) |
 
-> 3, 4번 항목의 미비점은 각 섹션 하단 "미구현/차이" 박스와 문서 맨 끝 [보완 제언](#보완-제언)에 정리했습니다. RDS는 적용 완료, S3는 vector_db 동기화 용도로 이미 구현되어 있으며(정적/미디어용은 미도입), 현재 진행 상황은 4번 섹션과 [보완 제언](#보완-제언)에 정리했습니다.
+> 4번 항목의 미비점은 해당 섹션 하단 "미구현/차이" 박스와 문서 맨 끝 [보완 제언](#보완-제언)에 정리했습니다. RDS는 적용 완료, S3는 vector_db 동기화 용도로 이미 구현되어 있으며(정적/미디어용은 미도입), 현재 진행 상황은 4번 섹션과 [보완 제언](#보완-제언)에 정리했습니다.
 
 ---
 
@@ -40,8 +40,8 @@
 | ES 모듈 import/오케스트레이션 | `static/labor/js/app-main.js:1-5` |
 | async/await + fetch | `static/labor/js/app-main.js:36, 72-73` |
 | 스프레드 문법 | `static/labor/js/admin-dashboard.js:7` |
-| 구조분해 할당 파라미터 | `static/labor/js/advice.js:80-106` |
-| 이벤트 위임 (`closest()`) | `static/labor/js/advice.js:184-222` |
+| 구조분해 할당 파라미터 | `static/labor/js/utils.js:71` (`streamSSE(url, { method, body, onProgress, onDone, onError })`) |
+| 이벤트 위임 (`closest()`) | `static/labor/js/advice.js:141-189` |
 | 실시간 클라이언트 검증 | `static/labor/js/calculator.js:10-53` |
 
 ---
@@ -54,30 +54,30 @@
 
 | 구현 내용 | 근거 |
 |---|---|
-| SSE 스트림을 직접 파싱하는 fetch 리더 | `static/labor/js/advice.js:80-105` `streamAdvice()` |
-| 로딩 스피너 + 진행률 텍스트 | `static/labor/js/advice.js:65-67` |
-| 경과시간 타이머 | `static/labor/js/advice.js:151-155` |
-| LangGraph 노드별 진행상황 문구 변환 | `static/labor/js/advice.js:71-75` |
-| 실패 시 사용자 노출 에러 메시지 | `static/labor/js/advice.js:167-171` |
+| SSE 스트림을 직접 파싱하는 fetch 리더 | `static/labor/js/utils.js:71-98` `streamSSE()` (advice.js:112에서 호출) |
+| 로딩 스피너 + 진행률 텍스트 | `static/labor/js/utils.js:56-58` `renderProgress()` (advice.js:101에서 호출) |
+| 경과시간 타이머 | `static/labor/js/advice.js:106-110` |
+| LangGraph 노드별 진행상황 문구 변환 | `static/labor/js/utils.js:62-66` `formatProgress()` (advice.js:116에서 호출) |
+| 실패 시 사용자 노출 에러 메시지 | `static/labor/js/advice.js:124-128` (`onError` 콜백) |
 | try/catch 에러 처리 | `static/labor/js/app-main.js:71-83` |
 
 ### 백엔드 (SSE / LLM 호출)
 
 | 구현 내용 | 근거 |
 |---|---|
-| `StreamingHttpResponse` 기반 SSE 응답 | `backend/views.py:375-444` `advice_api()` |
-| 진행상황 이벤트 제너레이터 | `backend/views.py:397-419` `event_stream()` |
+| `StreamingHttpResponse` 기반 SSE 응답 | `backend/views.py:375-440` `advice_api()` |
+| 진행상황 이벤트 제너레이터 | `backend/views.py:393-435` `event_stream()` |
 | 백그라운드 스레드 + Queue로 실시간 진행상황 전달 | `engine/supervisor/engine.py:58-133` |
 | OpenAI LLM 호출 (타임아웃·재시도 설정) | `engine/config.py:7, 21-26` |
 | 임베딩 API 연동 | `engine/config.py:28-30` |
-| OpenAI 예외 → 사용자 메시지 변환 | `engine/utils/llm_errors.py:2` |
-| nginx에서 SSE 버퍼링 차단 설정 | `docker/nginx.conf:19-28` |
+| OpenAI 예외 → 사용자 메시지 변환 | `engine/utils/llm_errors.py:14-25` `llm_error_message()` |
+| nginx에서 SSE 버퍼링 차단 설정 (`/api/advice/`, `/api/news/stream/` 동일 패턴) | `docker/nginx.conf:37-61` |
 
 ---
 
 ## 3. Django 백엔드 구현
 
-**결론: MVT/ORM/인증·인가는 탄탄하나, CBV와 Django Form 클래스는 미사용 (아래 "미구현" 참고)**
+**결론: MVT/ORM/인증·인가에 더해 CBV(`View` 서브클래스)와 Django Form/ModelForm까지 모두 도입됨**
 
 ### MVT 패턴
 
@@ -94,22 +94,22 @@
 
 | 구현 내용 | 근거 |
 |---|---|
-| 필터/정렬/카운트 쿼리셋 | `backend/views.py:230-232` |
+| 필터/정렬/카운트 쿼리셋 | `backend/views.py:233, 235` |
 | 집계 쿼리셋 (`Count`, `TruncDay` 등) | `backend/services/dashboard.py:29-35` |
-| `update_or_create` | `backend/views.py:333-339` |
-| 마이그레이션 | `chat/migrations/0001~0004`, `monitoring/migrations/0001` |
+| `update_or_create` | `monitoring/management/commands/seed_price_config.py:18-25` (가격 시드), `monitoring/migrations/0002_seed_price_config.py:13-20` |
+| 마이그레이션 | `chat/migrations/0001~0004`, `monitoring/migrations/0001~0002` |
 
 ### FBV / CBV, 폼 검증, 인증·인가
 
 | 항목 | 현황 | 근거 |
 |---|---|---|
-| FBV | ✅ 전체 뷰가 함수 기반 | `backend/views.py:60-444` 전반 |
-| CBV | ❌ 미사용 | 레포 전체에서 `View`/`ListView` 서브클래스 없음 |
-| Django Form/ModelForm | ❌ 미사용, 수동 검증으로 대체 | `backend/views.py:146-154` `register_view()` |
-| 로그인/세션/잠금 | ✅ | `backend/views.py:91-136`, 5회 실패 시 10분 잠금 |
-| 관리자 전용 접근 제어 | ✅ | `backend/views.py:251-252` |
-| IDOR 방지(본인 데이터만 조회) | ✅ | `backend/views.py:520-523` |
-| 세션 만료(60분) | ✅ | `backend/settings.py:130-132` |
+| FBV | ✅ 대부분의 뷰가 함수 기반 | `backend/views.py:60-440` 전반 |
+| CBV | ✅ `View` 서브클래스 2개 도입 | `backend/views.py:305-313` `PriceConfigView(UserPassesTestMixin, View)`, `backend/views.py:532-543` `HistoryDetailView(LoginRequiredMixin, View)` |
+| Django Form/ModelForm | ✅ 도입됨 (`RegisterForm`, `PriceConfigForm`) | `backend/forms.py:9-43`, `backend/forms.py:46-81`, 호출부 `backend/views.py:156-169`(`register_view`), `backend/views.py:330-332`(`PriceConfigView.post`) |
+| 로그인/세션/잠금 | ✅ | `backend/views.py:29-30, 94-153`, 5회 실패 시 10분 잠금 |
+| 관리자 전용 접근 제어 | ✅ | `backend/views.py:249-261` `admin_console()` (역할 검사), `backend/views.py:305-313` `PriceConfigView.test_func()` |
+| IDOR 방지(본인 데이터만 조회) | ✅ | `backend/views.py:532-543` `HistoryDetailView` |
+| 세션 만료(60분) | ✅ | `backend/settings.py:147-149` |
 | 마이크로서비스 간 Bearer 토큰 인증 | ✅ | `ranker/ranker/views.py:28-32` |
 
 ---
@@ -129,13 +129,13 @@
 | GPU 랭커 전용 compose | `docker/docker-compose.ranker-gpu.aws.yml` |
 | nginx 리버스 프록시 설정 | `docker/nginx.conf`, `doc/manuals/nginx-backend-deploy.md` |
 
-nginx 도입으로 `backend` 컨테이너는 `expose: 8000`(내부망 전용)만 사용하고, 외부에는 nginx의 80 포트만 노출됨 — 공격 표면 축소. 호스트 Nginx/Apache와의 포트 충돌 대응 절차까지 문서화됨.
+nginx 도입으로 `backend` 컨테이너는 `expose: 8000`(내부망 전용)만 사용하고, 외부에는 nginx의 80(→443 리다이렉트)/443 포트만 노출됨 — 공격 표면 축소. nginx가 Let's Encrypt 인증서로 TLS까지 종료한다(`docker/nginx.conf:1-21`). 호스트 Nginx/Apache와의 포트 충돌 대응 절차까지 문서화됨.
 
 ### AWS EC2 2대 분리 배포
 
 | 서버 | 인스턴스 타입 | 역할 | 보안그룹 |
 |---|---|---|---|
-| Backend EC2 | `t3.large` (최소 `t3.medium`) | 웹 서빙, Django API, Chroma 검색, OpenAI 호출 | 22(내 IP), 80(nginx) |
+| Backend EC2 | `t3.large` (최소 `t3.medium`) | 웹 서빙, Django API, Chroma 검색, OpenAI 호출 | 22(내 IP), 80/443(nginx, TLS 종료) |
 | Ranker GPU EC2 | `g4dn.2xlarge`/`g5.2xlarge` (최소 `g4dn.xlarge`) | 랭커 모델 서빙(`/rerank/`) | 22(내 IP), 8001(Backend만 허용) |
 
 두 서버는 VPC 내부 Private IP로 통신(`RANKER_URL=http://RANKER_PRIVATE_IP:8001/rerank/`). GPU 랭커는 Gunicorn worker를 1개로 고정해 모델이 worker마다 복제되어 VRAM이 초과되는 것을 방지(`docker/Dockerfile.ranker.gpu`). 배포 문서(`doc/manuals/aws-ec2-two-server-deploy.md`)에 10단계 배포 순서와 워밍업/OOM/디스크 부족 트러블슈팅 절차가 포함되어 있어 재현 가능한 형태로 정상 동작을 검증할 수 있음.
@@ -152,9 +152,9 @@ DB 계층은 `DATABASE_URL` 환경변수 유무로 SQLite/RDS를 전환하도록
 
 | 구현 내용 | 근거 |
 |---|---|
-| `DATABASE_URL` 기반 DB 분기 (`dj_database_url.parse`) | `backend/settings.py:91-107` |
-| PostgreSQL 드라이버 | `requirements.txt:18` (`psycopg[binary]`) |
-| 커넥션 풀링(`DB_CONN_MAX_AGE`), SSL 강제(`DB_SSL_REQUIRE`) | `backend/settings.py:97-98` |
+| `DATABASE_URL` 기반 DB 분기 (`dj_database_url.parse`) | `backend/settings.py:94-113` |
+| PostgreSQL 드라이버 | `apps/backend/requirements.txt:18` (`psycopg[binary]`) |
+| 커넥션 풀링(`DB_CONN_MAX_AGE`), SSL 강제(`DB_SSL_REQUIRE`) | `backend/settings.py:103-104` |
 | RDS 생성값·전환 절차·백업/복원·롤백 가이드 | `doc/manuals/rds-postgres-migration.md` |
 
 > `DATABASE_URL`이 비어 있으면 기존처럼 SQLite로 동작 — 로컬 개발 환경은 SQLite 그대로 두고, 배포 환경(EC2)만 RDS를 사용하도록 분리 적용됨.
@@ -164,7 +164,7 @@ DB 계층은 `DATABASE_URL` 환경변수 유무로 SQLite/RDS를 전환하도록
 
 | 구현 내용 | 근거 |
 |---|---|
-| GitHub Actions 배포 스텝에서 `aws s3 sync`로 `vector_db/` 복원 | `.github/workflows/deploy-ec2.yml:28-41` |
+| GitHub Actions 배포 스텝에서 `aws s3 sync`로 `vector_db/` 복원 | `.github/workflows/deploy-ec2.yml:35-47` |
 | S3 URI를 시크릿으로 주입 (`VECTOR_DB_S3_URI`), 미설정 시 스킵 | 위 워크플로 조건문 (`if [ -n "${{ secrets.VECTOR_DB_S3_URI }}" ]`) |
 | EC2에 AWS CLI 미설치 시 자동 설치 후 `aws s3 sync ... --delete` 실행 | 위 워크플로 |
 
@@ -187,14 +187,14 @@ DB 계층은 `DATABASE_URL` 환경변수 유무로 SQLite/RDS를 전환하도록
 
 | 평가기준 요구사항 | 현황 |
 |---|---|
-| CBV | 미사용 — 전체 FBV로만 구현 |
-| Django Form/ModelForm | 미사용 — 뷰 함수 내 수동 검증(`if not name or not email...`)으로 대체 |
-| RDS | 적용 완료 — `settings.py:91-107`에서 `DATABASE_URL` 유무로 SQLite/PostgreSQL(RDS) 분기, 배포 환경(EC2)은 `DATABASE_URL`을 RDS 엔드포인트로 설정해 사용 중, 로컬 개발 환경은 미설정 시 SQLite로 자동 대체 |
+| CBV | 적용 완료 — `backend/views.py:305-313` `PriceConfigView(UserPassesTestMixin, View)`, `backend/views.py:532-543` `HistoryDetailView(LoginRequiredMixin, View)` |
+| Django Form/ModelForm | 적용 완료 — `backend/forms.py`의 `RegisterForm(forms.Form)`, `PriceConfigForm(forms.ModelForm)`을 각각 `register_view()`(`views.py:156-169`), `PriceConfigView.post()`(`views.py:330-332`)에서 사용 |
+| RDS | 적용 완료 — `settings.py:94-113`에서 `DATABASE_URL` 유무로 SQLite/PostgreSQL(RDS) 분기, 배포 환경(EC2)은 `DATABASE_URL`을 RDS 엔드포인트로 설정해 사용 중, 로컬 개발 환경은 미설정 시 SQLite로 자동 대체 |
 | S3 | vector_db 동기화 용도로 구현 완료 — `main`의 `.github/workflows/deploy-ec2.yml`에서 배포 시 `aws s3 sync`로 Chroma `vector_db/` 복원. 정적/미디어 파일용 `django-storages`/`boto3`는 미도입 |
 
 ## 보완 제언
 
-1. **CBV 추가** — 관리자 대시보드류 뷰 1~2개를 `View`/`TemplateView`로 리팩터링
-2. **Django Form 도입** — `register_view()`의 수동 검증을 `RegisterForm(forms.Form)` + `clean_*`로 전환
+1. **CBV 적용 완료** — `PriceConfigView`/`HistoryDetailView` 두 뷰가 `View` 서브클래스로 구현됨. 관리자 대시보드의 나머지 함수형 뷰(`admin_console` 등)도 필요 시 `TemplateView`로 추가 전환 가능(선택)
+2. **Django Form 적용 완료** — `register_view()`의 수동 검증이 `RegisterForm(forms.Form)` + `clean_*`로 전환됨, 관리자 가격 설정도 `PriceConfigForm(forms.ModelForm)`으로 전환됨
 3. **RDS 적용 완료** — 코드(`DATABASE_URL` 분기) 및 배포 환경 적용까지 완료. 절차/롤백 가이드는 `doc/manuals/rds-postgres-migration.md` 참고
 4. **정적/미디어 파일 S3화 (선택, 미도입)** — 필요 시 `django-storages`+`boto3` 추가, `STORAGES` 설정 및 버킷/IAM 구성으로 확장 가능
