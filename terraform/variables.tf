@@ -45,6 +45,12 @@ variable "ssh_allowed_cidr" {
   type        = string
 }
 
+variable "ci_ssh_allowed_cidr" {
+  description = "GitHub Actions 등 CI/CD가 SSH로 배포할 때 허용할 CIDR. 러너 IP가 계속 바뀌므로 기본값은 0.0.0.0/0 (SSH 키로만 인증됨). 더 좁히고 싶으면 GitHub Actions IP 대역(api.github.com/meta)을 직접 넣을 것"
+  type        = string
+  default     = "0.0.0.0/0"
+}
+
 variable "web_allowed_cidr" {
   description = "Backend 80 포트(nginx)를 허용할 CIDR"
   type        = string
