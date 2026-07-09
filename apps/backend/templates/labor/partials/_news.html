@@ -1,23 +1,13 @@
-<section class="content-narrow" data-news-api="{% url 'news_api' %}">
+<section class="content-narrow" data-news-api="{% url 'news_api' %}" data-news-stream-api="{% url 'news_stream_api' %}">
     <h1>최신 노동법 뉴스</h1>
     <p class="lead">카테고리나 자연어 질의로 노동법 관련 소식을 찾아보세요</p>
     <form class="search-panel" id="newsForm" method="POST" action="?page=news">
         {% csrf_token %}
-        <input id="newsQuery" placeholder="예: 대기업 노조 관련 뉴스 알려줘" value="대기업 노조 관련 뉴스 알려줘">
+        <input id="newsQuery" placeholder="예: 대기업 노조 관련 뉴스 알려줘">
         <button type="submit">검색</button>
     </form>
     <br>
-    <div class="summary-box" id="newsSummary">{{ news_summary }}</div>
+    <div class="summary-box" id="newsSummary"></div>
     <p class="answer-disclaimer">※ 이 답변은 AI가 제공하는 참고 정보이며 법적 효력이 있는 자문이 아닙니다. 구체적인 사안은 노무사·변호사 등 전문가와 상담하세요.</p>
-    <div class="news-list" id="newsList">
-        {% for news in news_items %}
-            <article class="news-card">
-                <a href="{{ news.link }}" target="_blank" rel="noopener">
-                    <header><time>{{ news.date }}</time></header>
-                    <h2>{{ news.title }}</h2>
-                    <p>{{ news.summary }}</p>
-                </a>
-            </article>
-        {% endfor %}
-    </div>
+    <div class="news-list" id="newsList"></div>
 </section>

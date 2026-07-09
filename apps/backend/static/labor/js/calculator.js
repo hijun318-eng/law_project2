@@ -1,4 +1,4 @@
-import { postJson, appendMessage, escapeHtml, markdownToHtml, LEGAL_DISCLAIMER_HTML } from "./utils.js?v=3";
+import { postJson, appendMessage, escapeHtml, markdownToHtml, LEGAL_DISCLAIMER_HTML } from "./utils.js?v=4";
 
 const FIELD_LABELS = { salary: "월 기본급", months: "근무 기간", hours: "주 소정근로시간" };
 

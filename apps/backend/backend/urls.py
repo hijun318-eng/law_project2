@@ -24,6 +24,7 @@ urlpatterns = [
     path("api/advice/history/<int:history_id>/", views.HistoryDetailView.as_view(), name="history_detail_api"),
     path("api/calculate/", views.calculate_api, name="calculate_api"),
     path("api/news/", views.news_api, name="news_api"),
+    path("api/news/stream/", views.news_stream_api, name="news_stream_api"),
     path("api/prompts/", views.prompt_api, name="prompt_api"),
 
 ]
