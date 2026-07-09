@@ -62,7 +62,7 @@ law_project2/
 │   │   │   ├── supervisor/      # 복합 질문용 멀티에이전트 컨트롤러
 │   │   │   ├── calculator/      # 임금/퇴직금 계산 ReAct 파이프라인
 │   │   │   ├── news/            # 네이버 뉴스 수집·요약
-│   │   │   ├── ocr_contract/    # 근로계약서 OCR 파이프라인
+│   │   │   ├── ocr_contract/    # 근로계약서 OCR 파이프라인(현재 사용은 안함)
 │   │   │   └── prompts/         # 프롬프트 템플릿(*.md, 관리자 화면에서 편집)
 │   │   ├── static/ · templates/ # 정적 자원, HTML 템플릿
 │   │   └── requirements.txt
