@@ -213,12 +213,6 @@ def user_app(request):
     if page not in {"home", "calculator", "news", "mypage"}:
         page = "home"
 
-    # 뉴스 탭일 때만 NewsEngine 호출 (다른 탭에서는 불필요한 LLM 호출을 피함)
-    if page == "news":
-        news_items, news_summary_text = news.get_news()
-    else:
-        news_items, news_summary_text = [], ""
-
     return render(
         request,
         "labor/app.html",
@@ -228,8 +222,6 @@ def user_app(request):
             "initial_question": request.GET.get("question", "").strip(),
             "quick_questions": _QUICK_QUESTIONS,
             "minimum_wage": calculator.MINIMUM_WAGE_2026,
-            "news_items": news_items,
-            "news_summary": news_summary_text,
             "history": [
                 {
                     "id": h.id,
@@ -565,6 +557,36 @@ def news_api(request):
     query = request.GET.get("q", "")
     items, summary_text = news.get_news(query)
     return JsonResponse({"items": items, "summary": summary_text})
+
+
+def news_stream_api(request):
+    """advice_api와 동일한 SSE 방식으로, 뉴스 검색 진행상황을 실시간으로 전달한다."""
+    query = request.GET.get("q", "")
+
+    def event_stream():
+        try:
+            for event in news.stream_news(query):
+                if event[0] == "done":
+                    _, items, summary_text = event
+                    yield _sse({"type": "done", "items": items, "summary": summary_text})
+                else:
+                    _, node_name, phase, label, log, elapsed = event
+                    yield _sse({
+                        "type": "progress",
+                        "node": node_name,
+                        "phase": phase,
+                        "label": label,
+                        "log": log,
+                        "elapsed": round(elapsed, 2) if elapsed is not None else None,
+                    })
+        except Exception:
+            logger.exception("news_stream_api 스트리밍 실패")
+            yield _sse({"type": "done", "items": [], "summary": "뉴스를 불러오지 못했습니다. 잠시 후 다시 시도해주세요."})
+
+    response = StreamingHttpResponse(event_stream(), content_type="text/event-stream; charset=utf-8")
+    response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"
+    return response
 
 
 def _current_user(request):

@@ -52,6 +52,51 @@ export function markdownToHtml(text) {
     return html;
 }
 
+// 진행상황 스피너 표시용 마크업. 노드 시작/종료 이벤트를 받아 .progress-label/.progress-timer를 갱신하며 사용한다.
+export function renderProgress(label) {
+    return `<div class="progress-indicator"><span class="spinner" aria-hidden="true"></span><span class="progress-label">${escapeHtml(label)}</span><span class="progress-timer">0초</span></div>`;
+}
+
+// 노드 시작/종료 이벤트를 사람이 읽을 문장으로 변환.
+// 시작: "🔍 판례 직접 검색 중..." / 종료: "🔍 판례 직접 검색 완료 (1.2초)" (+ 있으면 세부 사유)
+export function formatProgress(data) {
+    const elapsedText = data.elapsed != null ? ` (${data.elapsed}초)` : "";
+    const base = data.phase === "start" ? `${data.label} 중...` : `${data.label} 완료${elapsedText}`;
+    return data.log ? `${base} · ${data.log}` : base;
+}
+
+// SSE(text/event-stream) 응답을 프레임 단위로 파싱하며 순서대로 콜백을 호출한다.
+// EventSource를 쓰지 않는 이유: advice_api처럼 POST + JSON body가 필요한 경우가 있어
+// fetch + ReadableStream으로 직접 파싱한다. data.type에 따라 onProgress/onDone을 호출한다.
+export function streamSSE(url, { method = "GET", body, onProgress, onDone, onError }) {
+    const options = { method };
+    if (body !== undefined) {
+        options.headers = { "Content-Type": "application/json", "X-CSRFToken": csrf() };
+        options.body = JSON.stringify(body);
+    }
+    fetch(url, options).then((response) => {
+        if (!response.ok || !response.body) throw new Error(`요청 실패 (status ${response.status})`);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        const pump = () => reader.read().then(({ done, value }) => {
+            if (value) buffer += decoder.decode(value, { stream: true });
+            const chunks = buffer.split("\n\n");
+            buffer = done ? "" : chunks.pop();
+            chunks.forEach((chunk) => {
+                const line = chunk.split("\n").find((l) => l.startsWith("data: "));
+                if (!line) return;
+                const data = JSON.parse(line.slice(6));
+                if (data.type === "progress") onProgress(data);
+                else if (data.type === "done") onDone(data);
+            });
+            if (!done) return pump();
+        });
+        return pump();
+    }).catch(onError);
+}
+
 export function appendMessage(container, role, html, withActions, rawHtml, messageId) {
     const node = document.createElement("div");
     node.className = `message ${role}`;
